@@ -16,6 +16,7 @@ import {
   type OptionsMenuStep,
 } from "./flows.ts";
 import { businessPk } from "./keys.ts";
+import { MEMBERSHIP_PREFIX, NotAMemberError, memberEntities } from "./members.ts";
 import type { Channel, Clock, OutboundOptions } from "./ports.ts";
 import { buildTables, type TableNames } from "./tables.ts";
 
@@ -67,8 +68,41 @@ export function createCore(dependencies: Dependencies) {
   const Business = businessEntity(tables);
   const { Conversation, Message } = conversationEntities(tables);
   const { Flow, FlowVersion } = flowEntities(tables);
+  const { Member, Membership, userPk } = memberEntities(tables);
 
-  return {
+  const core = {
+    /** Signs a user up: creates their Business with them as its owner. */
+    async createBusinessWithOwner(data: { name: string; owner: { userId: string; email: string } }) {
+      const { id } = await core.createBusiness({ name: data.name });
+      const { userId, email } = data.owner;
+      await Member.build(PutItemCommand).item({ businessId: id, userId, email, role: "owner" }).send();
+      await Membership.build(PutItemCommand)
+        .item({ userId, businessId: id, businessName: data.name, role: "owner" })
+        .send();
+      return { id };
+    },
+
+    /** The Businesses a user belongs to, with their role in each. */
+    async businessesOf(userId: string) {
+      const { Items = [] } = await tables.businesses
+        .build(QueryCommand)
+        .entities(Membership)
+        .query({ partition: userPk(userId), range: { beginsWith: MEMBERSHIP_PREFIX } })
+        .send();
+      return Items.map(({ businessId, businessName, role }) => ({ businessId, name: businessName, role }));
+    },
+
+    /**
+     * The entry point for the web panel: resolves the acting Member and only
+     * then exposes the Business's operations.
+     */
+    async asMember(businessId: string, userId: string) {
+      const { Item } = await Member.build(GetItemCommand).key({ businessId, userId }).send();
+      if (!Item) throw new NotAMemberError(`User ${userId} is not a Member of Business ${businessId}`);
+      const member = { userId: Item.userId, email: Item.email, role: Item.role };
+      return { ...core.business(businessId), member };
+    },
+
     async createBusiness(data: { name: string }) {
       const id = randomUUID();
       await Business.build(PutItemCommand).item({ id, ...data }).send();
@@ -255,6 +289,8 @@ export function createCore(dependencies: Dependencies) {
       };
     },
   };
+
+  return core;
 }
 
 export type Core = ReturnType<typeof createCore>;
