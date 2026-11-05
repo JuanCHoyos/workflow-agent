@@ -7,7 +7,10 @@ export {
   type Dependencies,
   type InboundMessage,
   type MessageAuthor,
+  type SimulationState,
+  type SimulationTurn,
 } from "./core.ts";
+export type { ContactInput, Reply } from "./engine.ts";
 export {
   InvalidFlowError,
   type EndStep,
