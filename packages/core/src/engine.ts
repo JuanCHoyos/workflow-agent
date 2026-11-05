@@ -7,7 +7,7 @@ import {
   type FlowDefinition,
   type FlowStep,
   type OptionsMenuStep,
-} from "./flows.ts";
+} from "./flow-definition.ts";
 import type { OutboundOptions } from "./ports.ts";
 
 export type Reply = { text: string; options?: OutboundOptions };
