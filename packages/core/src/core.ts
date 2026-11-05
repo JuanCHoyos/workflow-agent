@@ -2,11 +2,21 @@ import { randomUUID } from "node:crypto";
 import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { GetItemCommand } from "dynamodb-toolbox/entity/actions/get";
 import { PutItemCommand } from "dynamodb-toolbox/entity/actions/put";
+import { $set, UpdateItemCommand } from "dynamodb-toolbox/entity/actions/update";
 import { QueryCommand } from "dynamodb-toolbox/table/actions/query";
 import { businessEntity } from "./businesses.ts";
 import { CONVERSATION_PREFIX, conversationEntities } from "./conversations.ts";
+import {
+  MAX_BUTTON_OPTIONS,
+  flowEntities,
+  optionId,
+  validateFlow,
+  type FlowDefinition,
+  type FlowStep,
+  type OptionsMenuStep,
+} from "./flows.ts";
 import { businessPk } from "./keys.ts";
-import type { Channel, Clock } from "./ports.ts";
+import type { Channel, Clock, OutboundOptions } from "./ports.ts";
 import { buildTables, type TableNames } from "./tables.ts";
 
 export type Dependencies = {
@@ -18,7 +28,12 @@ export type Dependencies = {
 
 export type Contact = { phone: string };
 
-export type InboundMessage = { contact: Contact; text: string };
+export type InboundMessage = {
+  contact: Contact;
+  text: string;
+  /** Set when the Contact tapped a button or list row of an OptionsMenu. */
+  selectedOptionId?: string;
+};
 
 export type MessageAuthor = "contact" | "bot";
 
@@ -34,6 +49,13 @@ export type ConversationSummary = {
   messages: ConversationMessage[];
 };
 
+type PublishedFlow = { flowId: string; version: number; definition: FlowDefinition };
+
+/** Lowercase, trimmed and without accents, so "  RESERVAR " matches "Reservar". */
+function normalize(text: string) {
+  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
+}
+
 /** Unique, increasing sequence even when two messages share the same time. */
 function sequenceFor(date: Date) {
   return `${date.toISOString()}#${process.hrtime.bigint().toString().padStart(20, "0")}`;
@@ -44,9 +66,10 @@ export function createCore(dependencies: Dependencies) {
   const tables = buildTables(dependencies.dynamodb, dependencies.tables);
   const Business = businessEntity(tables);
   const { Conversation, Message } = conversationEntities(tables);
+  const { Flow, FlowVersion } = flowEntities(tables);
 
   return {
-    async createBusiness(data: { name: string; welcomeMessage: string }) {
+    async createBusiness(data: { name: string }) {
       const id = randomUUID();
       await Business.build(PutItemCommand).item({ id, ...data }).send();
       return { id };
@@ -64,20 +87,145 @@ export function createCore(dependencies: Dependencies) {
           .send();
       }
 
+      async function send(phone: string, text: string, options?: OutboundOptions) {
+        await channel.send({ businessId, phone, text, ...(options && { options }) });
+        await recordMessage(phone, "bot", text);
+      }
+
+      async function getFlow(flowId: string) {
+        const { Item } = await Flow.build(GetItemCommand).key({ businessId, flowId }).send();
+        if (!Item) throw new Error(`Flow ${flowId} does not exist`);
+        return Item;
+      }
+
+      async function getPublishedFlow(flowId: string, version: number): Promise<PublishedFlow> {
+        const { Item } = await FlowVersion.build(GetItemCommand)
+          .key({ businessId, flowId, version })
+          .send();
+        if (!Item) throw new Error(`Flow ${flowId} has no version ${version}`);
+        return { flowId, version, definition: Item.definition as FlowDefinition };
+      }
+
+      /**
+       * Runs steps from `stepId` until the Flow ends or waits for the Contact.
+       * A waiting Session stays pinned to the Flow version it is running.
+       */
+      async function runFrom(phone: string, flow: PublishedFlow, stepId: string) {
+        let current: string | undefined = stepId;
+        while (current) {
+          const step: FlowStep | undefined = flow.definition.steps[current];
+          if (!step || step.type === "end") break;
+          if (step.type === "optionsMenu") {
+            await sendOptionsMenu(phone, current, step);
+            await Conversation.build(PutItemCommand)
+              .item({
+                businessId,
+                phone,
+                sessionOpen: true,
+                sessionFlowId: flow.flowId,
+                sessionFlowVersion: flow.version,
+                sessionStepId: current,
+              })
+              .send();
+            return;
+          }
+          await send(phone, step.text);
+          current = step.next;
+        }
+        await Conversation.build(PutItemCommand)
+          .item({ businessId, phone, sessionOpen: false })
+          .send();
+      }
+
+      async function sendOptionsMenu(phone: string, stepId: string, step: OptionsMenuStep) {
+        await send(phone, step.text, {
+          style: step.options.length <= MAX_BUTTON_OPTIONS ? "buttons" : "list",
+          items: step.options.map((option, index) => ({ id: optionId(stepId, index), label: option.label })),
+        });
+      }
+
+      /** The option the Contact chose: a tapped button or list row, or its label typed as text. */
+      function chosenOption(stepId: string, step: OptionsMenuStep, message: InboundMessage) {
+        const typed = normalize(message.text);
+        return step.options.find(
+          (option, index) =>
+            message.selectedOptionId === optionId(stepId, index) || normalize(option.label) === typed,
+        );
+      }
+
+      async function continueSession(
+        phone: string,
+        session: { flowId: string; version: number; stepId: string },
+        message: InboundMessage,
+      ) {
+        const flow = await getPublishedFlow(session.flowId, session.version);
+        const step = flow.definition.steps[session.stepId];
+        if (step?.type !== "optionsMenu") return runFrom(phone, flow, session.stepId);
+        const option = chosenOption(session.stepId, step, message);
+        if (!option) return sendOptionsMenu(phone, session.stepId, step);
+        await runFrom(phone, flow, option.next);
+      }
+
       return {
-        async receiveInboundMessage({ contact, text }: InboundMessage) {
+        async createFlow(data: { name: string }) {
+          const flowId = randomUUID();
+          await Flow.build(PutItemCommand).item({ businessId, flowId, ...data }).send();
+          return { id: flowId };
+        },
+
+        async saveFlowDraft(flowId: string, draft: FlowDefinition) {
+          await getFlow(flowId);
+          await Flow.build(UpdateItemCommand).item({ businessId, flowId, draft: $set(draft) }).send();
+        },
+
+        async publishFlow(flowId: string) {
+          const flow = await getFlow(flowId);
+          const draft = flow.draft as FlowDefinition | undefined;
+          if (!draft) throw new Error(`Flow ${flowId} has no draft to publish`);
+          validateFlow(draft);
+          const version = (flow.publishedVersion ?? 0) + 1;
+          await FlowVersion.build(PutItemCommand)
+            .item({ businessId, flowId, version, definition: draft })
+            .send();
+          await Flow.build(UpdateItemCommand)
+            .item({ businessId, flowId, publishedVersion: version })
+            .send();
+          return { version };
+        },
+
+        async setMainFlow(flowId: string) {
+          await getFlow(flowId);
+          await Business.build(UpdateItemCommand).item({ id: businessId, mainFlowId: flowId }).send();
+        },
+
+        async receiveInboundMessage(message: InboundMessage) {
+          const { phone } = message.contact;
           const { Item: business } = await Business.build(GetItemCommand)
             .key({ id: businessId })
             .send();
           if (!business) throw new Error(`Business ${businessId} does not exist`);
 
-          await Conversation.build(PutItemCommand)
-            .item({ businessId, phone: contact.phone, sessionOpen: true })
+          const { Item: conversation } = await Conversation.build(GetItemCommand)
+            .key({ businessId, phone })
             .send();
-          await recordMessage(contact.phone, "contact", text);
+          await recordMessage(phone, "contact", message.text);
 
-          await channel.send({ businessId, phone: contact.phone, text: business.welcomeMessage });
-          await recordMessage(contact.phone, "bot", business.welcomeMessage);
+          const { sessionFlowId, sessionFlowVersion, sessionStepId } = conversation ?? {};
+          if (conversation?.sessionOpen && sessionFlowId && sessionFlowVersion && sessionStepId) {
+            await continueSession(
+              phone,
+              { flowId: sessionFlowId, version: sessionFlowVersion, stepId: sessionStepId },
+              message,
+            );
+            return;
+          }
+
+          await Conversation.build(PutItemCommand).item({ businessId, phone, sessionOpen: true }).send();
+          if (!business.mainFlowId) return;
+          const mainFlow = await getFlow(business.mainFlowId);
+          if (!mainFlow.publishedVersion) return;
+          const flow = await getPublishedFlow(mainFlow.flowId, mainFlow.publishedVersion);
+          await runFrom(phone, flow, flow.definition.startStepId);
         },
 
         async listConversations(): Promise<ConversationSummary[]> {

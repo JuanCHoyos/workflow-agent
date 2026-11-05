@@ -1,16 +1,16 @@
 import { expect, it } from "vitest";
-import { createTestEnvironment } from "./environment.ts";
+import { createBusinessWithMainFlow, createTestEnvironment, singleMessageFlow } from "./environment.ts";
 
 it("a Business never sees another Business's Conversations, even with the same Contact", async () => {
   const { core } = createTestEnvironment();
-  const pizzeria = await core.createBusiness({ name: "Pizzería", welcomeMessage: "Hola desde la pizzería" });
-  const barbershop = await core.createBusiness({ name: "Barbería", welcomeMessage: "Hola desde la barbería" });
+  const pizzeria = await createBusinessWithMainFlow(core, singleMessageFlow("Hola desde la pizzería"));
+  const barbershop = await createBusinessWithMainFlow(core, singleMessageFlow("Hola desde la barbería"));
   const contact = { phone: "+573009998877" };
 
-  await core.business(pizzeria.id).receiveInboundMessage({ contact, text: "quiero una pizza" });
-  await core.business(barbershop.id).receiveInboundMessage({ contact, text: "quiero un corte" });
+  await pizzeria.business.receiveInboundMessage({ contact, text: "quiero una pizza" });
+  await barbershop.business.receiveInboundMessage({ contact, text: "quiero un corte" });
 
-  const [barbershopConversation] = await core.business(barbershop.id).listConversations();
+  const [barbershopConversation] = await barbershop.business.listConversations();
   expect(barbershopConversation?.messages.map((m) => m.text)).toEqual([
     "quiero un corte",
     "Hola desde la barbería",
@@ -19,14 +19,20 @@ it("a Business never sees another Business's Conversations, even with the same C
 
 it("a Business with no messages sees no Conversations from other Businesses", async () => {
   const { core } = createTestEnvironment();
-  const withMessages = await core.createBusiness({ name: "Tienda", welcomeMessage: "Hola" });
-  const withoutMessages = await core.createBusiness({ name: "Papelería", welcomeMessage: "Hola" });
+  const withMessages = await createBusinessWithMainFlow(core, singleMessageFlow("Hola"));
+  const withoutMessages = await createBusinessWithMainFlow(core, singleMessageFlow("Hola"));
 
-  await core
-    .business(withMessages.id)
-    .receiveInboundMessage({ contact: { phone: "+573001234567" }, text: "hola" });
+  await withMessages.business.receiveInboundMessage({ contact: { phone: "+573001234567" }, text: "hola" });
 
-  expect(await core.business(withoutMessages.id).listConversations()).toEqual([]);
+  expect(await withoutMessages.business.listConversations()).toEqual([]);
+});
+
+it("a Business cannot use another Business's Flow as its main Flow", async () => {
+  const { core } = createTestEnvironment();
+  const pizzeria = await createBusinessWithMainFlow(core, singleMessageFlow("Hola desde la pizzería"));
+  const { id: otherId } = await core.createBusiness({ name: "Barbería" });
+
+  await expect(core.business(otherId).setMainFlow(pizzeria.flowId)).rejects.toThrow("does not exist");
 });
 
 it("rejects messages for a Business that does not exist without sending anything", async () => {

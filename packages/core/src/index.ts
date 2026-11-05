@@ -8,5 +8,13 @@ export {
   type InboundMessage,
   type MessageAuthor,
 } from "./core.ts";
-export type { Channel, Clock, OutboundMessage } from "./ports.ts";
+export {
+  InvalidFlowError,
+  type EndStep,
+  type FlowDefinition,
+  type FlowStep,
+  type MessageStep,
+  type OptionsMenuStep,
+} from "./flows.ts";
+export type { Channel, Clock, OutboundMessage, OutboundOptions } from "./ports.ts";
 export { createTables, type TableNames } from "./tables.ts";
