@@ -1,5 +1,6 @@
 import { randomUUID } from "node:crypto";
 import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
+import { DeleteItemCommand } from "dynamodb-toolbox/entity/actions/delete";
 import { GetItemCommand } from "dynamodb-toolbox/entity/actions/get";
 import { PutItemCommand } from "dynamodb-toolbox/entity/actions/put";
 import { $set, UpdateItemCommand } from "dynamodb-toolbox/entity/actions/update";
@@ -7,7 +8,8 @@ import { QueryCommand } from "dynamodb-toolbox/table/actions/query";
 import { businessEntity } from "./businesses.ts";
 import { CONVERSATION_PREFIX, conversationEntities } from "./conversations.ts";
 import { continueFrom, runSteps, type ContactInput, type Reply, type RunResult } from "./engine.ts";
-import { flowEntities, validateFlow, type FlowDefinition } from "./flows.ts";
+import { validateFlow, type FlowDefinition } from "./flow-definition.ts";
+import { FLOW_PREFIX, flowEntities, flowSk } from "./flows.ts";
 import { businessPk } from "./keys.ts";
 import { MEMBERSHIP_PREFIX, NotAMemberError, memberEntities } from "./members.ts";
 import type { Channel, Clock, OutboundOptions } from "./ports.ts";
@@ -47,6 +49,14 @@ type PublishedFlow = { flowId: string; version: number; definition: FlowDefiniti
 
 /** Where a simulated Session waits; null before it starts or after it ends. */
 export type SimulationState = { stepId: string } | null;
+
+export type FlowSummary = {
+  id: string;
+  name: string;
+  publishedVersion: number | null;
+  isMain: boolean;
+  hasDraft: boolean;
+};
 
 export type SimulationTurn = { replies: Reply[]; state: SimulationState; ended: boolean };
 
@@ -165,6 +175,60 @@ export function createCore(dependencies: Dependencies) {
       }
 
       return {
+        async listFlows(): Promise<FlowSummary[]> {
+          const [{ Items = [] }, { Item: business }] = await Promise.all([
+            tables.businesses
+              .build(QueryCommand)
+              .entities(Flow)
+              .query({ partition: businessPk(businessId), range: { beginsWith: FLOW_PREFIX } })
+              .send(),
+            Business.build(GetItemCommand).key({ id: businessId }).send(),
+          ]);
+          return Items.map((flow) => ({
+            id: flow.flowId,
+            name: flow.name,
+            publishedVersion: flow.publishedVersion ?? null,
+            isMain: business?.mainFlowId === flow.flowId,
+            hasDraft: flow.draft !== undefined,
+          }));
+        },
+
+        async getFlowForEditing(flowId: string) {
+          const [flow, { Item: business }] = await Promise.all([
+            getFlow(flowId),
+            Business.build(GetItemCommand).key({ id: businessId }).send(),
+          ]);
+          return {
+            id: flow.flowId,
+            name: flow.name,
+            draft: (flow.draft as FlowDefinition | undefined) ?? null,
+            publishedVersion: flow.publishedVersion ?? null,
+            isMain: business?.mainFlowId === flow.flowId,
+          };
+        },
+
+        async renameFlow(flowId: string, name: string) {
+          await getFlow(flowId);
+          await Flow.build(UpdateItemCommand).item({ businessId, flowId, name }).send();
+        },
+
+        /** Deletes a Flow and its published versions. The main Flow cannot be deleted. */
+        async deleteFlow(flowId: string) {
+          const { Item: business } = await Business.build(GetItemCommand).key({ id: businessId }).send();
+          if (business?.mainFlowId === flowId) {
+            throw new Error(`Flow ${flowId} is the main Flow; choose another main Flow first`);
+          }
+          const { Items: versions = [] } = await tables.businesses
+            .build(QueryCommand)
+            .entities(FlowVersion)
+            .query({ partition: businessPk(businessId), range: { beginsWith: `${flowSk(flowId)}#` } })
+            .send();
+          for (const { version } of versions) {
+            await FlowVersion.build(DeleteItemCommand).key({ businessId, flowId, version }).send();
+          }
+          await Flow.build(DeleteItemCommand).key({ businessId, flowId }).send();
+        },
+
         async createFlow(data: { name: string }) {
           const flowId = randomUUID();
           await Flow.build(PutItemCommand).item({ businessId, flowId, ...data }).send();
