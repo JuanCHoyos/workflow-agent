@@ -2,5 +2,23 @@
   "name": "@workflow-agent/functions",
   "private": true,
   "type": "module",
-  "dependencies": { "@workflow-agent/core": "workspace:*" }
+  "dependencies": {
+    "@hono/node-server": "^2.1.6",
+    "@openauthjs/openauth": "^0.4.3",
+    "@workflow-agent/core": "workspace:*",
+    "hono": "^4.13.16",
+    "sst": "^4.17.2",
+    "valibot": "^1.5.0"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "tsx": "^4.23.15"
+  },
+  "exports": {
+    "./auth/subjects": "./src/auth/subjects.ts"
+  },
+  "scripts": {
+    "auth:local": "tsx src/auth/local.ts",
+    "typecheck": "tsc --noEmit"
+  }
 }
