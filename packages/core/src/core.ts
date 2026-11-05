@@ -6,15 +6,8 @@ import { $set, UpdateItemCommand } from "dynamodb-toolbox/entity/actions/update"
 import { QueryCommand } from "dynamodb-toolbox/table/actions/query";
 import { businessEntity } from "./businesses.ts";
 import { CONVERSATION_PREFIX, conversationEntities } from "./conversations.ts";
-import {
-  MAX_BUTTON_OPTIONS,
-  flowEntities,
-  optionId,
-  validateFlow,
-  type FlowDefinition,
-  type FlowStep,
-  type OptionsMenuStep,
-} from "./flows.ts";
+import { continueFrom, runSteps, type ContactInput, type Reply, type RunResult } from "./engine.ts";
+import { flowEntities, validateFlow, type FlowDefinition } from "./flows.ts";
 import { businessPk } from "./keys.ts";
 import { MEMBERSHIP_PREFIX, NotAMemberError, memberEntities } from "./members.ts";
 import type { Channel, Clock, OutboundOptions } from "./ports.ts";
@@ -52,10 +45,10 @@ export type ConversationSummary = {
 
 type PublishedFlow = { flowId: string; version: number; definition: FlowDefinition };
 
-/** Lowercase, trimmed and without accents, so "  RESERVAR " matches "Reservar". */
-function normalize(text: string) {
-  return text.normalize("NFD").replace(/\p{Diacritic}/gu, "").trim().toLowerCase();
-}
+/** Where a simulated Session waits; null before it starts or after it ends. */
+export type SimulationState = { stepId: string } | null;
+
+export type SimulationTurn = { replies: Reply[]; state: SimulationState; ended: boolean };
 
 /** Unique, increasing sequence even when two messages share the same time. */
 function sequenceFor(date: Date) {
@@ -141,50 +134,25 @@ export function createCore(dependencies: Dependencies) {
       }
 
       /**
-       * Runs steps from `stepId` until the Flow ends or waits for the Contact.
-       * A waiting Session stays pinned to the Flow version it is running.
+       * Sends the replies of a run and records where the Session waits. A
+       * waiting Session stays pinned to the Flow version it is running.
        */
-      async function runFrom(phone: string, flow: PublishedFlow, stepId: string) {
-        let current: string | undefined = stepId;
-        while (current) {
-          const step: FlowStep | undefined = flow.definition.steps[current];
-          if (!step || step.type === "end") break;
-          if (step.type === "optionsMenu") {
-            await sendOptionsMenu(phone, current, step);
-            await Conversation.build(PutItemCommand)
-              .item({
-                businessId,
-                phone,
-                sessionOpen: true,
-                sessionFlowId: flow.flowId,
-                sessionFlowVersion: flow.version,
-                sessionStepId: current,
-              })
-              .send();
-            return;
-          }
-          await send(phone, step.text);
-          current = step.next;
-        }
+      async function applyRun(phone: string, flow: PublishedFlow, run: RunResult) {
+        for (const reply of run.replies) await send(phone, reply.text, reply.options);
         await Conversation.build(PutItemCommand)
-          .item({ businessId, phone, sessionOpen: false })
+          .item(
+            run.waitingAt
+              ? {
+                  businessId,
+                  phone,
+                  sessionOpen: true,
+                  sessionFlowId: flow.flowId,
+                  sessionFlowVersion: flow.version,
+                  sessionStepId: run.waitingAt,
+                }
+              : { businessId, phone, sessionOpen: false },
+          )
           .send();
-      }
-
-      async function sendOptionsMenu(phone: string, stepId: string, step: OptionsMenuStep) {
-        await send(phone, step.text, {
-          style: step.options.length <= MAX_BUTTON_OPTIONS ? "buttons" : "list",
-          items: step.options.map((option, index) => ({ id: optionId(stepId, index), label: option.label })),
-        });
-      }
-
-      /** The option the Contact chose: a tapped button or list row, or its label typed as text. */
-      function chosenOption(stepId: string, step: OptionsMenuStep, message: InboundMessage) {
-        const typed = normalize(message.text);
-        return step.options.find(
-          (option, index) =>
-            message.selectedOptionId === optionId(stepId, index) || normalize(option.label) === typed,
-        );
       }
 
       async function continueSession(
@@ -193,11 +161,7 @@ export function createCore(dependencies: Dependencies) {
         message: InboundMessage,
       ) {
         const flow = await getPublishedFlow(session.flowId, session.version);
-        const step = flow.definition.steps[session.stepId];
-        if (step?.type !== "optionsMenu") return runFrom(phone, flow, session.stepId);
-        const option = chosenOption(session.stepId, step, message);
-        if (!option) return sendOptionsMenu(phone, session.stepId, step);
-        await runFrom(phone, flow, option.next);
+        await applyRun(phone, flow, continueFrom(flow.definition, session.stepId, message));
       }
 
       return {
@@ -205,6 +169,28 @@ export function createCore(dependencies: Dependencies) {
           const flowId = randomUUID();
           await Flow.build(PutItemCommand).item({ businessId, flowId, ...data }).send();
           return { id: flowId };
+        },
+
+        /**
+         * Runs one turn of the draft as if a Contact had written, without
+         * sending messages or storing anything. The caller keeps the state.
+         */
+        async simulateFlowDraft(
+          flowId: string,
+          input: ContactInput & { state: SimulationState },
+        ): Promise<SimulationTurn> {
+          const flow = await getFlow(flowId);
+          const draft = flow.draft as FlowDefinition | undefined;
+          if (!draft) throw new Error(`Flow ${flowId} has no draft to simulate`);
+          validateFlow(draft);
+          const run = input.state
+            ? continueFrom(draft, input.state.stepId, input)
+            : runSteps(draft, draft.startStepId);
+          return {
+            replies: run.replies,
+            state: run.waitingAt ? { stepId: run.waitingAt } : null,
+            ended: run.waitingAt === null,
+          };
         },
 
         async saveFlowDraft(flowId: string, draft: FlowDefinition) {
@@ -259,7 +245,7 @@ export function createCore(dependencies: Dependencies) {
           const mainFlow = await getFlow(business.mainFlowId);
           if (!mainFlow.publishedVersion) return;
           const flow = await getPublishedFlow(mainFlow.flowId, mainFlow.publishedVersion);
-          await runFrom(phone, flow, flow.definition.startStepId);
+          await applyRun(phone, flow, runSteps(flow.definition, flow.definition.startStepId));
         },
 
         async listConversations(): Promise<ConversationSummary[]> {
