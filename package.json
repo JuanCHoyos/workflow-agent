@@ -8,11 +8,15 @@
     "typecheck": "pnpm -r --if-present typecheck",
     "build": "pnpm -r --if-present build",
     "dev": "sst dev",
-    "deploy": "sst deploy"
+    "deploy": "sst deploy",
+    "dev:local": "tsx scripts/dev-local.ts"
   },
   "devDependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1161.0",
     "@types/node": "^26.6.6",
+    "@workflow-agent/core": "workspace:*",
     "sst": "^4.17.2",
+    "tsx": "^4.23.15",
     "typescript": "^7.0.2"
   }
 }
