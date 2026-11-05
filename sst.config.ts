@@ -19,9 +19,13 @@ export default $config({
     const businesses = new sst.aws.Dynamo("Businesses", keys);
     const conversations = new sst.aws.Dynamo("Conversations", keys);
 
+    const auth = new sst.aws.Auth("Auth", {
+      issuer: "packages/functions/src/auth/handler.handler",
+    });
+
     const web = new sst.aws.Nextjs("Web", {
       path: "packages/web",
-      link: [businesses, conversations],
+      link: [businesses, conversations, auth],
     });
 
     const admin = new sst.aws.Nextjs("Admin", {
@@ -29,6 +33,6 @@ export default $config({
       link: [businesses, conversations],
     });
 
-    return { web: web.url, admin: admin.url };
+    return { web: web.url, admin: admin.url, auth: auth.url };
   },
 });

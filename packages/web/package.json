@@ -8,6 +8,8 @@
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1161.0",
+    "@openauthjs/openauth": "^0.4.3",
     "@workflow-agent/core": "workspace:*",
     "@workflow-agent/functions": "workspace:*",
     "next": "^16.4.5",
