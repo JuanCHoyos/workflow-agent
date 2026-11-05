@@ -3,7 +3,7 @@ import { NotAMemberError } from "@workflow-agent/core";
 import { subjects } from "@workflow-agent/functions/auth/subjects";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { Resource } from "sst";
+import { linked } from "./resources.ts";
 import { getCore } from "./core.ts";
 
 const ACCESS_COOKIE = "access_token";
@@ -11,7 +11,7 @@ const REFRESH_COOKIE = "refresh_token";
 export const BUSINESS_COOKIE = "business_id";
 
 function issuerUrl() {
-  return process.env.OPENAUTH_ISSUER_URL ?? Resource.Auth.url;
+  return process.env.OPENAUTH_ISSUER_URL ?? linked.Auth.url;
 }
 
 export const authClient = () => createClient({ clientID: "web", issuer: issuerUrl() });

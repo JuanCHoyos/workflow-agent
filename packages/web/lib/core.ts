@@ -1,6 +1,6 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { createCore, type Core, type TableNames } from "@workflow-agent/core";
-import { Resource } from "sst";
+import { linked } from "./resources.ts";
 
 /** Table names come from env vars locally and from SST links in AWS. */
 function tableNames(): TableNames {
@@ -10,7 +10,7 @@ function tableNames(): TableNames {
       conversations: process.env.CONVERSATIONS_TABLE,
     };
   }
-  return { businesses: Resource.Businesses.name, conversations: Resource.Conversations.name };
+  return { businesses: linked.Businesses.name, conversations: linked.Conversations.name };
 }
 
 function dynamoClient() {
