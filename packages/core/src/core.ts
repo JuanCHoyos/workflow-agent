@@ -3,111 +3,110 @@ import type { DynamoDBClient } from "@aws-sdk/client-dynamodb";
 import { GetItemCommand } from "dynamodb-toolbox/entity/actions/get";
 import { PutItemCommand } from "dynamodb-toolbox/entity/actions/put";
 import { QueryCommand } from "dynamodb-toolbox/table/actions/query";
-import { entidadesDeConversacion } from "./conversaciones.ts";
-import { entidadNegocio } from "./negocios.ts";
-import type { Canal, Reloj } from "./puertos.ts";
-import { construirTablas, type NombresDeTablas } from "./tablas.ts";
+import { businessEntity } from "./businesses.ts";
+import { CONVERSATION_PREFIX, conversationEntities } from "./conversations.ts";
+import { businessPk } from "./keys.ts";
+import type { Channel, Clock } from "./ports.ts";
+import { buildTables, type TableNames } from "./tables.ts";
 
-export type Dependencias = {
+export type Dependencies = {
   dynamodb: DynamoDBClient;
-  tablas: NombresDeTablas;
-  canal: Canal;
-  reloj: Reloj;
+  tables: TableNames;
+  channel: Channel;
+  clock: Clock;
 };
 
-export type Contacto = { telefono: string };
+export type Contact = { phone: string };
 
-export type MensajeEntrante = { contacto: Contacto; texto: string };
+export type InboundMessage = { contact: Contact; text: string };
 
-export type MensajeDeConversacion = {
-  autor: "contacto" | "bot";
-  texto: string;
-  enviadoEn: string;
+export type MessageAuthor = "contact" | "bot";
+
+export type ConversationMessage = {
+  author: MessageAuthor;
+  text: string;
+  sentAt: string;
 };
 
-export type ResumenDeConversacion = {
-  contacto: Contacto;
-  sesionAbierta: boolean;
-  mensajes: MensajeDeConversacion[];
+export type ConversationSummary = {
+  contact: Contact;
+  sessionOpen: boolean;
+  messages: ConversationMessage[];
 };
 
-/** Orden único y creciente aunque dos mensajes compartan la misma hora. */
-function ordenDe(fecha: Date) {
-  return `${fecha.toISOString()}#${process.hrtime.bigint().toString().padStart(20, "0")}`;
+/** Unique, increasing sequence even when two messages share the same time. */
+function sequenceFor(date: Date) {
+  return `${date.toISOString()}#${process.hrtime.bigint().toString().padStart(20, "0")}`;
 }
 
-export function crearCore(dependencias: Dependencias) {
-  const { canal, reloj } = dependencias;
-  const tablas = construirTablas(dependencias.dynamodb, dependencias.tablas);
-  const Negocio = entidadNegocio(tablas);
-  const { Conversacion, Mensaje, negocioPk } = entidadesDeConversacion(tablas);
+export function createCore(dependencies: Dependencies) {
+  const { channel, clock } = dependencies;
+  const tables = buildTables(dependencies.dynamodb, dependencies.tables);
+  const Business = businessEntity(tables);
+  const { Conversation, Message } = conversationEntities(tables);
 
   return {
-    async crearNegocio(datos: { nombre: string; mensajeDeBienvenida: string }) {
+    async createBusiness(data: { name: string; welcomeMessage: string }) {
       const id = randomUUID();
-      await Negocio.build(PutItemCommand).item({ id, ...datos }).send();
+      await Business.build(PutItemCommand).item({ id, ...data }).send();
       return { id };
     },
 
     /**
-     * Todas las operaciones sobre los datos de un Negocio pasan por aquí:
-     * el identificador del Negocio es obligatorio y acota cada acceso.
+     * Every operation on a Business's data goes through here: the Business id
+     * is mandatory and scopes every access.
      */
-    negocio(negocioId: string) {
-      async function registrarMensaje(telefono: string, autor: "contacto" | "bot", texto: string) {
-        const ahora = reloj.ahora();
-        await Mensaje.build(PutItemCommand)
-          .item({ negocioId, telefono, orden: ordenDe(ahora), autor, texto, enviadoEn: ahora.toISOString() })
+    business(businessId: string) {
+      async function recordMessage(phone: string, author: MessageAuthor, text: string) {
+        const now = clock.now();
+        await Message.build(PutItemCommand)
+          .item({ businessId, phone, sequence: sequenceFor(now), author, text, sentAt: now.toISOString() })
           .send();
       }
 
       return {
-        async recibirMensajeEntrante({ contacto, texto }: MensajeEntrante) {
-          const { Item: negocio } = await Negocio.build(GetItemCommand)
-            .key({ id: negocioId })
+        async receiveInboundMessage({ contact, text }: InboundMessage) {
+          const { Item: business } = await Business.build(GetItemCommand)
+            .key({ id: businessId })
             .send();
-          if (!negocio) throw new Error(`Negocio ${negocioId} no existe`);
+          if (!business) throw new Error(`Business ${businessId} does not exist`);
 
-          await Conversacion.build(PutItemCommand)
-            .item({ negocioId, telefono: contacto.telefono, sesionAbierta: true })
+          await Conversation.build(PutItemCommand)
+            .item({ businessId, phone: contact.phone, sessionOpen: true })
             .send();
-          await registrarMensaje(contacto.telefono, "contacto", texto);
+          await recordMessage(contact.phone, "contact", text);
 
-          await canal.enviar({
-            negocioId,
-            telefono: contacto.telefono,
-            texto: negocio.mensajeDeBienvenida,
-          });
-          await registrarMensaje(contacto.telefono, "bot", negocio.mensajeDeBienvenida);
+          await channel.send({ businessId, phone: contact.phone, text: business.welcomeMessage });
+          await recordMessage(contact.phone, "bot", business.welcomeMessage);
         },
 
-        async listarConversaciones(): Promise<ResumenDeConversacion[]> {
-          const { Items = [] } = await tablas.conversaciones
+        async listConversations(): Promise<ConversationSummary[]> {
+          const { Items = [] } = await tables.conversations
             .build(QueryCommand)
-            .entities(Conversacion, Mensaje)
-            .query({ partition: negocioPk(negocioId), range: { beginsWith: "CONVERSACION#" } })
+            .entities(Conversation, Message)
+            .query({ partition: businessPk(businessId), range: { beginsWith: CONVERSATION_PREFIX } })
             .options({ showEntityAttr: true })
             .send();
 
-          const porTelefono = new Map<string, ResumenDeConversacion>();
-          for (const registro of Items) {
-            if (registro.entity !== "Conversacion") continue;
-            porTelefono.set(registro.telefono, {
-              contacto: { telefono: registro.telefono },
-              sesionAbierta: registro.sesionAbierta,
-              mensajes: [],
+          const byPhone = new Map<string, ConversationSummary>();
+          for (const record of Items) {
+            if (record.entity !== "Conversation") continue;
+            byPhone.set(record.phone, {
+              contact: { phone: record.phone },
+              sessionOpen: record.sessionOpen,
+              messages: [],
             });
           }
-          for (const registro of Items) {
-            if (registro.entity !== "Mensaje") continue;
-            const { autor, texto, enviadoEn } = registro;
-            porTelefono.get(registro.telefono)?.mensajes.push({ autor, texto, enviadoEn });
+          for (const record of Items) {
+            if (record.entity !== "Message") continue;
+            const { author, text, sentAt } = record;
+            byPhone.get(record.phone)?.messages.push({ author, text, sentAt });
           }
-          return [...porTelefono.values()];
+          return [...byPhone.values()];
         },
       };
     },
   };
 }
 
-export type Core = ReturnType<typeof crearCore>;
+export type Core = ReturnType<typeof createCore>;

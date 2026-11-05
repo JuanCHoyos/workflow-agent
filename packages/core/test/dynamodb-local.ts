@@ -1,33 +1,34 @@
 import { execFileSync } from "node:child_process";
 import { DynamoDBClient, ListTablesCommand } from "@aws-sdk/client-dynamodb";
-import { crearTablas } from "../src/index.ts";
-import { ENDPOINT, NOMBRES_DE_TABLAS, crearClienteLocal } from "./entorno.ts";
+import { createTables } from "../src/index.ts";
+import { ENDPOINT, TEST_TABLE_NAMES, createLocalClient } from "./environment.ts";
 
-const CONTENEDOR = "workflow-agent-dynamodb-local";
+const CONTAINER = "workflow-agent-dynamodb-local";
 
-async function disponible(cliente: DynamoDBClient) {
+async function isAvailable(client: DynamoDBClient) {
   try {
-    await cliente.send(new ListTablesCommand({}));
+    await client.send(new ListTablesCommand({}));
     return true;
   } catch {
     return false;
   }
 }
 
+/** Starts DynamoDB Local in Docker unless DYNAMODB_ENDPOINT points to a running one. */
 export default async function setup() {
-  const cliente = crearClienteLocal();
-  if (!(await disponible(cliente))) {
+  const client = createLocalClient();
+  if (!(await isAvailable(client))) {
     if (process.env.DYNAMODB_ENDPOINT) {
-      throw new Error(`DynamoDB Local no responde en ${ENDPOINT}`);
+      throw new Error(`DynamoDB Local is not responding at ${ENDPOINT}`);
     }
     execFileSync("docker", [
-      "run", "-d", "--rm", "--name", CONTENEDOR, "-p", "8000:8000",
+      "run", "-d", "--rm", "--name", CONTAINER, "-p", "8000:8000",
       "amazon/dynamodb-local", "-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb",
     ]);
-    for (let intento = 0; !(await disponible(cliente)); intento++) {
-      if (intento > 60) throw new Error("DynamoDB Local no arrancó a tiempo");
-      await new Promise((r) => setTimeout(r, 500));
+    for (let attempt = 0; !(await isAvailable(client)); attempt++) {
+      if (attempt > 60) throw new Error("DynamoDB Local did not start in time");
+      await new Promise((resolve) => setTimeout(resolve, 500));
     }
   }
-  await crearTablas(cliente, NOMBRES_DE_TABLAS);
+  await createTables(client, TEST_TABLE_NAMES);
 }

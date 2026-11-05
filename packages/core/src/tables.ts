@@ -6,36 +6,36 @@ import {
 import { DynamoDBDocumentClient } from "@aws-sdk/lib-dynamodb";
 import { Table } from "dynamodb-toolbox/table";
 
-/** Nombres físicos de las tablas; en AWS los provee SST, en pruebas son fijos. */
-export type NombresDeTablas = {
-  negocios: string;
-  conversaciones: string;
+/** Physical table names: provided by SST in AWS, fixed in tests. */
+export type TableNames = {
+  businesses: string;
+  conversations: string;
 };
 
-const LLAVES = {
+const KEYS = {
   partitionKey: { name: "pk", type: "string" },
   sortKey: { name: "sk", type: "string" },
 } as const;
 
-export function construirTablas(dynamodb: DynamoDBClient, nombres: NombresDeTablas) {
+export function buildTables(dynamodb: DynamoDBClient, names: TableNames) {
   const documentClient = DynamoDBDocumentClient.from(dynamodb, {
     marshallOptions: { removeUndefinedValues: true },
   });
   return {
-    negocios: new Table({ name: nombres.negocios, documentClient, ...LLAVES }),
-    conversaciones: new Table({ name: nombres.conversaciones, documentClient, ...LLAVES }),
+    businesses: new Table({ name: names.businesses, documentClient, ...KEYS }),
+    conversations: new Table({ name: names.conversations, documentClient, ...KEYS }),
   };
 }
 
-export type Tablas = ReturnType<typeof construirTablas>;
+export type Tables = ReturnType<typeof buildTables>;
 
-/** Crea las tablas si no existen. Solo para entornos locales y de prueba. */
-export async function crearTablas(dynamodb: DynamoDBClient, nombres: NombresDeTablas) {
-  for (const nombre of Object.values(nombres)) {
+/** Creates the tables if they don't exist. Local and test environments only. */
+export async function createTables(dynamodb: DynamoDBClient, names: TableNames) {
+  for (const name of Object.values(names)) {
     try {
       await dynamodb.send(
         new CreateTableCommand({
-          TableName: nombre,
+          TableName: name,
           BillingMode: "PAY_PER_REQUEST",
           AttributeDefinitions: [
             { AttributeName: "pk", AttributeType: "S" },
