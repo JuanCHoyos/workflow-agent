@@ -9,9 +9,11 @@
   },
   "dependencies": {
     "@workflow-agent/core": "workspace:*",
+    "@workflow-agent/functions": "workspace:*",
     "next": "^16.4.5",
     "react": "^19.3.1",
-    "react-dom": "^19.3.1"
+    "react-dom": "^19.3.1",
+    "sst": "^4.17.2"
   },
   "devDependencies": {
     "@types/react": "^19.3.0",
