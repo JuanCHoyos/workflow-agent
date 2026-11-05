@@ -16,6 +16,8 @@ Single-context: one `GLOSSARY.md` and `docs/adr/` at the repo root. See `docs/ag
 
 All code is written in English: functions, variables, types, file names, comments, test names, DynamoDB key prefixes and infrastructure resource names. Spanish is used only for user-facing text (bot messages, UI copy) and for the domain docs (`GLOSSARY.md`, ADRs, specs, issues).
 
+Commit messages and PR titles follow [Conventional Commits](https://www.conventionalcommits.org/) in English: `type(scope): summary`, lowercase and imperative, with the issue in the footer (`Closes #6`). Types: `feat`, `fix`, `refactor`, `docs`, `test`, `chore`, `ci`, `build`, `perf`. Scopes: `core`, `web`, `admin`, `functions`, `infra`. PRs are squash-merged, so the PR title becomes the commit on `main`.
+
 Domain terms from `GLOSSARY.md` map to code names as follows:
 
 | Glossary (es) | Code (en) |

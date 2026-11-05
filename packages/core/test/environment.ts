@@ -1,5 +1,12 @@
 import { DynamoDBClient } from "@aws-sdk/client-dynamodb";
-import { createCore, type Channel, type Clock, type OutboundMessage } from "../src/index.ts";
+import {
+  createCore,
+  type Channel,
+  type Clock,
+  type Core,
+  type FlowDefinition,
+  type OutboundMessage,
+} from "../src/index.ts";
 
 export const ENDPOINT = process.env.DYNAMODB_ENDPOINT ?? "http://localhost:8000";
 
@@ -44,3 +51,27 @@ export function createTestEnvironment() {
   });
   return { core, channel, clock };
 }
+
+/** Creates a Business whose main Flow is the given definition, already published. */
+export async function createBusinessWithMainFlow(
+  core: Core,
+  definition: FlowDefinition,
+  name = "Negocio de prueba",
+) {
+  const { id: businessId } = await core.createBusiness({ name });
+  const business = core.business(businessId);
+  const { id: flowId } = await business.createFlow({ name: "Principal" });
+  await business.saveFlowDraft(flowId, definition);
+  await business.publishFlow(flowId);
+  await business.setMainFlow(flowId);
+  return { businessId, business, flowId };
+}
+
+/** A main Flow that only sends one Message and ends. */
+export const singleMessageFlow = (text: string): FlowDefinition => ({
+  startStepId: "greeting",
+  steps: {
+    greeting: { type: "message", text, next: "end" },
+    end: { type: "end" },
+  },
+});

@@ -11,7 +11,7 @@ export function businessEntity(tables: Tables) {
     schema: item({
       id: string().key(),
       name: string(),
-      welcomeMessage: string(),
+      mainFlowId: string().optional(),
     }),
     computeKey: ({ id }) => ({ pk: businessPk(id), sk: "BUSINESS" }),
   });
