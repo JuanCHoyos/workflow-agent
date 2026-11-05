@@ -1,0 +1,11 @@
+node_modules/
+.sst/
+.next/
+.open-next/
+dist/
+coverage/
+*.log
+.env*
+!.env.example
+*.tsbuildinfo
+next-env.d.ts
