@@ -11,22 +11,22 @@ export default $config({
     };
   },
   async run() {
-    const llaves = {
+    const keys = {
       fields: { pk: "string", sk: "string" },
       primaryIndex: { hashKey: "pk", rangeKey: "sk" },
     } as const;
 
-    const negocios = new sst.aws.Dynamo("Negocios", llaves);
-    const conversaciones = new sst.aws.Dynamo("Conversaciones", llaves);
+    const businesses = new sst.aws.Dynamo("Businesses", keys);
+    const conversations = new sst.aws.Dynamo("Conversations", keys);
 
     const web = new sst.aws.Nextjs("Web", {
       path: "packages/web",
-      link: [negocios, conversaciones],
+      link: [businesses, conversations],
     });
 
     const admin = new sst.aws.Nextjs("Admin", {
       path: "packages/admin",
-      link: [negocios, conversaciones],
+      link: [businesses, conversations],
     });
 
     return { web: web.url, admin: admin.url };
