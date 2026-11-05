@@ -1,0 +1,6 @@
+{
+  "name": "@workflow-agent/functions",
+  "private": true,
+  "type": "module",
+  "dependencies": { "@workflow-agent/core": "workspace:*" }
+}
