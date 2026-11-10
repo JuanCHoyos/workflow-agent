@@ -1,0 +1,144 @@
+/* Phone: bottom sheet over a scrim. */
+
+.scrim {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  background: var(--scrim);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 300ms ease;
+}
+
+.scrim[data-open] {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sheet {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 41;
+  display: flex;
+  flex-direction: column;
+  max-height: min(82dvh, 720px);
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  border-bottom: none;
+  border-radius: var(--radius-xl) var(--radius-xl) 0 0;
+  box-shadow: var(--shadow-lg);
+  padding-bottom: env(safe-area-inset-bottom);
+  transform: translateY(100%);
+  visibility: hidden;
+  transition:
+    transform 420ms var(--ease-drawer),
+    visibility 0s linear 420ms;
+}
+
+.sheet[data-open] {
+  transform: translateY(0);
+  visibility: visible;
+  transition:
+    transform 420ms var(--ease-drawer),
+    visibility 0s;
+}
+
+/* While the finger is down the sheet follows it 1:1. */
+.sheet[data-dragging] {
+  transition: none;
+}
+
+.header {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  padding: var(--space-5) var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+  touch-action: none;
+  cursor: grab;
+}
+
+.handle {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  width: 36px;
+  height: 5px;
+  margin-left: -18px;
+  border-radius: 999px;
+  background: var(--border-strong);
+}
+
+.title {
+  font-size: 1rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+
+.body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--space-4);
+}
+
+/* Desktop: docked side panel, always in the layout. */
+
+@media (min-width: 900px) {
+  .scrim {
+    display: none;
+  }
+
+  .sheet {
+    position: static;
+    max-height: none;
+    height: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    box-shadow: none;
+    padding-bottom: 0;
+    transform: none;
+    visibility: visible;
+    transition: none;
+  }
+
+  .sheet:not([data-open]) {
+    display: none;
+  }
+
+  .header {
+    padding: var(--space-3) var(--space-3) var(--space-3) var(--space-4);
+    cursor: default;
+    touch-action: auto;
+  }
+
+  .handle {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sheet,
+  .sheet[data-open] {
+    transition:
+      opacity 200ms ease,
+      visibility 0s linear 200ms;
+    transform: none;
+    opacity: 0;
+  }
+
+  .sheet[data-open] {
+    opacity: 1;
+    transition: opacity 200ms ease;
+  }
+}
