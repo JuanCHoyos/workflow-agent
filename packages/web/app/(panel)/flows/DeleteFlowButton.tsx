@@ -24,6 +24,7 @@ export function DeleteFlowButton({ flowId, flowName }: { flowId: string; flowNam
         open={open}
         title={`¿Borrar "${flowName}"?`}
         confirmLabel="Borrar Flujo"
+        pendingLabel="Borrando…"
         destructive
         pending={pending}
         onClose={() => setOpen(false)}

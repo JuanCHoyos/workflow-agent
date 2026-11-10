@@ -8,14 +8,16 @@ import {
   type FlowStep,
 } from "@workflow-agent/core/flow-definition";
 import { Flag, Plus, Trash2, X } from "lucide-react";
-import { DAY_LABELS } from "./model.ts";
+import { DAY_LABELS, STEP_LABELS, type SourceHandle } from "./model.ts";
 import styles from "./editor.module.css";
 
 type Props = {
   stepId: string;
   step: FlowStep;
+  steps: Record<string, FlowStep>;
   isStart: boolean;
   onChange: (step: FlowStep) => void;
+  onSetTarget: (handle: SourceHandle, target: string) => void;
   onMakeStart: () => void;
   onDelete: () => void;
 };
@@ -39,17 +41,66 @@ function emptyCheck(kind: ConditionCheck["kind"]): ConditionCheck {
   }
 }
 
+/** How a step reads in a select: its type and the start of its text. */
+function stepOptionLabel(step: FlowStep) {
+  if (step.type === "end" || step.type === "condition") return STEP_LABELS[step.type];
+  const preview = step.text.length > 32 ? `${step.text.slice(0, 32)}…` : step.text;
+  return `${STEP_LABELS[step.type]}: ${preview}`;
+}
+
+/**
+ * Connects a branch to another step without dragging (WCAG 2.5.7). Mirrors
+ * what dragging a connection on the canvas does.
+ */
+function NextStepSelect({
+  id,
+  label,
+  stepId,
+  steps,
+  value,
+  onSelect,
+}: {
+  id: string;
+  label: string;
+  stepId: string;
+  steps: Record<string, FlowStep>;
+  value: string;
+  onSelect: (target: string) => void;
+}) {
+  return (
+    <div className="field">
+      <label htmlFor={id} className="field-label">
+        {label}
+      </label>
+      <select id={id} className="select" value={steps[value] ? value : ""} onChange={(event) => onSelect(event.target.value)}>
+        <option value="">Sin conectar</option>
+        {Object.entries(steps)
+          .filter(([candidate]) => candidate !== stepId)
+          .map(([candidate, step]) => (
+            <option key={candidate} value={candidate}>
+              {stepOptionLabel(step)}
+            </option>
+          ))}
+      </select>
+    </div>
+  );
+}
+
 /** Variable names are used as {{name}}: letters, digits, dots, dashes and underscores. */
 const cleanVariable = (value: string) => value.replace(/[^\w.-]/g, "");
 
 function ConditionEditor({
   stepId,
   step,
+  steps,
   onChange,
+  onSetTarget,
 }: {
   stepId: string;
   step: ConditionStep;
+  steps: Record<string, FlowStep>;
   onChange: (step: FlowStep) => void;
+  onSetTarget: (handle: SourceHandle, target: string) => void;
 }) {
   const updateRule = (index: number, when: ConditionCheck) =>
     onChange({ ...step, rules: step.rules.map((rule, i) => (i === index ? { ...rule, when } : rule)) });
@@ -131,6 +182,14 @@ function ConditionEditor({
                   })}
                 </div>
               )}
+              <NextStepSelect
+                id={`${stepId}-rule-${index}-next`}
+                label="Si se cumple, ir a"
+                stepId={stepId}
+                steps={steps}
+                value={rule.next}
+                onSelect={(target) => onSetTarget(`rule-${index}`, target)}
+              />
             </li>
           );
         })}
@@ -143,11 +202,19 @@ function ConditionEditor({
         <Plus aria-hidden="true" />
         Agregar regla
       </button>
+      <NextStepSelect
+        id={`${stepId}-otherwise-next`}
+        label="Si no se cumple ninguna, ir a"
+        stepId={stepId}
+        steps={steps}
+        value={step.otherwise}
+        onSelect={(target) => onSetTarget("otherwise", target)}
+      />
     </fieldset>
   );
 }
 
-export function StepPanel({ stepId, step, isStart, onChange, onMakeStart, onDelete }: Props) {
+export function StepPanel({ stepId, step, steps, isStart, onChange, onSetTarget, onMakeStart, onDelete }: Props) {
   const textId = `${stepId}-text`;
 
   return (
@@ -194,7 +261,20 @@ export function StepPanel({ stepId, step, isStart, onChange, onMakeStart, onDele
         </div>
       )}
 
-      {step.type === "condition" && <ConditionEditor stepId={stepId} step={step} onChange={onChange} />}
+      {step.type === "condition" && (
+        <ConditionEditor stepId={stepId} step={step} steps={steps} onChange={onChange} onSetTarget={onSetTarget} />
+      )}
+
+      {(step.type === "message" || step.type === "question") && (
+        <NextStepSelect
+          id={`${stepId}-next`}
+          label="Siguiente paso"
+          stepId={stepId}
+          steps={steps}
+          value={step.next}
+          onSelect={(target) => onSetTarget("next", target)}
+        />
+      )}
 
       {step.type === "optionsMenu" && (
         <fieldset className={styles.fieldset}>
@@ -204,7 +284,8 @@ export function StepPanel({ stepId, step, isStart, onChange, onMakeStart, onDele
           <p className="field-hint">Hasta 3 se muestran como botones; de 4 a 10, como lista.</p>
           <ol className={styles.optionList}>
             {step.options.map((option, index) => (
-              <li key={index} className={styles.optionRow}>
+              <li key={index} className={styles.optionItem}>
+                <div className={styles.optionRow}>
                 <input
                   className="input"
                   value={option.label}
@@ -225,6 +306,15 @@ export function StepPanel({ stepId, step, isStart, onChange, onMakeStart, onDele
                 >
                   <X />
                 </button>
+                </div>
+                <NextStepSelect
+                  id={`${stepId}-option-${index}-next`}
+                  label={`"${option.label || `Opción ${index + 1}`}" lleva a`}
+                  stepId={stepId}
+                  steps={steps}
+                  value={option.next}
+                  onSelect={(target) => onSetTarget(`option-${index}`, target)}
+                />
               </li>
             ))}
           </ol>

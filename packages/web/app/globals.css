@@ -78,7 +78,8 @@
     --text-secondary: #d7d5cc;
     --text-muted: #a8a69d;
     --accent: #b85a38;
-    --accent-hover: #c6613f;
+    /* Hover darkens in both themes so white text keeps ≥4.5:1. */
+    --accent-hover: #a64f30;
     --accent-text: #e8957a;
     --accent-soft: rgb(217 119 87 / 16%);
     --on-accent: #ffffff;
@@ -115,6 +116,14 @@
 html {
   -webkit-text-size-adjust: 100%;
   text-size-adjust: 100%;
+}
+
+/* Keep focused elements clear of the sticky top bar and fixed tab bar. */
+@media (max-width: 899px) {
+  html {
+    scroll-padding-top: 56px;
+    scroll-padding-bottom: 72px;
+  }
 }
 
 html,
@@ -300,6 +309,12 @@ p {
   cursor: not-allowed;
 }
 
+/* Toggle buttons (aria-pressed) show their on state. */
+.btn[aria-pressed="true"] {
+  --btn-bg: var(--pressed);
+  --btn-border: var(--border-strong);
+}
+
 .btn-primary {
   --btn-bg: var(--accent);
   --btn-fg: var(--on-accent);
@@ -324,6 +339,18 @@ p {
 @media (hover: hover) and (pointer: fine) {
   .btn-danger:hover:not(:disabled) {
     --btn-bg: var(--danger-soft);
+  }
+}
+
+.btn-danger-strong {
+  --btn-bg: var(--danger-soft);
+  --btn-fg: var(--danger);
+  --btn-border: color-mix(in srgb, var(--danger) 45%, transparent);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .btn-danger-strong:hover:not(:disabled) {
+    --btn-bg: color-mix(in srgb, var(--danger) 22%, transparent);
   }
 }
 
@@ -436,6 +463,13 @@ input[type="time"].input {
   transition: background-color 200ms ease;
 }
 
+/* A larger invisible hit area around the 26px track. */
+.switch::before {
+  content: "";
+  position: absolute;
+  inset: -9px;
+}
+
 .switch::after {
   content: "";
   position: absolute;
@@ -506,6 +540,21 @@ input[type="time"].input {
   outline-offset: 2px;
 }
 
+/* Touch screens get 44px targets everywhere, including compact controls. */
+@media (pointer: coarse) {
+  .btn-sm {
+    min-height: var(--control-h);
+  }
+
+  .btn-icon.btn-sm {
+    width: var(--control-h);
+  }
+
+  .chip-toggle span {
+    min-height: var(--control-h);
+  }
+}
+
 /* ============================================================
    Feedback
    ============================================================ */
@@ -571,7 +620,8 @@ input[type="time"].input {
 
 .dialog {
   width: min(440px, calc(100vw - 32px));
-  padding: var(--space-5);
+  /* No padding on the <dialog> itself: a click on it means "outside the content". */
+  padding: 0;
   border: 1px solid var(--border);
   border-radius: var(--radius-xl);
   background: var(--surface-raised);

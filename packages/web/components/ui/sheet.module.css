@@ -142,3 +142,7 @@
     transition: opacity 200ms ease;
   }
 }
+
+.sheet:focus {
+  outline: none;
+}
