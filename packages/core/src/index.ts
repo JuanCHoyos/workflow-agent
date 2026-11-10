@@ -11,7 +11,15 @@ export {
   type SimulationState,
   type SimulationTurn,
 } from "./core.ts";
-export type { ContactInput, Reply } from "./engine.ts";
+export {
+  DEFAULT_TIME_ZONE,
+  interpolate,
+  isWithinBusinessHours,
+  type ContactInput,
+  type Reply,
+  type RunContext,
+  type Variables,
+} from "./engine.ts";
 export * from "./flow-definition.ts";
 export { NotAMemberError, type MemberRole } from "./members.ts";
 export type { Channel, Clock, OutboundMessage, OutboundOptions } from "./ports.ts";
