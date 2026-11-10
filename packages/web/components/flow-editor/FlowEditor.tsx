@@ -17,7 +17,6 @@ import {
 import {
   AlertTriangle,
   ArrowLeft,
-  Check,
   ChevronDown,
   Diamond,
   HelpCircle,
@@ -25,6 +24,7 @@ import {
   MessageSquare,
   MessagesSquare,
   Plus,
+  Save,
   Square,
   Star,
 } from "lucide-react";
@@ -363,7 +363,7 @@ export function FlowEditor({
             <span className={styles.hideOnPhone} aria-hidden="true">
               Guardar
             </span>
-            <Check aria-hidden="true" className={styles.showOnPhone} />
+            <Save aria-hidden="true" className={styles.showOnPhone} />
           </button>
           {!isMain && publishedVersion && (
             <button type="button" className="btn btn-sm btn-ghost" onClick={makeMain} disabled={pending}>
@@ -376,7 +376,7 @@ export function FlowEditor({
             className="btn btn-sm btn-primary"
             onClick={publish}
             disabled={pending || issues.length > 0}
-            title={issues.length > 0 ? "Corrige los problemas antes de publicar" : undefined}
+            aria-describedby={issues.length > 0 ? "publish-blocked" : undefined}
           >
             Publicar
           </button>
@@ -384,7 +384,19 @@ export function FlowEditor({
       </header>
 
       <div className={styles.workspace}>
-        <div className={styles.canvas} ref={canvasRef}>
+        <div
+          className={styles.canvas}
+          ref={canvasRef}
+          // Steps are focusable with Tab; Enter or Space opens the focused step's panel.
+          onKeyDown={(event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            const node = (event.target as HTMLElement).closest<HTMLElement>(".react-flow__node");
+            const id = node?.dataset.id;
+            if (!id) return;
+            event.preventDefault();
+            select(id);
+          }}
+        >
           {mounted && (
             <ReactFlow
               onInit={setFlow}
@@ -403,7 +415,7 @@ export function FlowEditor({
               colorMode="system"
               defaultEdgeOptions={{ type: "smoothstep" }}
               connectionRadius={36}
-              proOptions={{ hideAttribution: true }}
+              attributionPosition="top-right"
             >
               <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} />
               <Controls showInteractive={false} position="bottom-right" />
@@ -423,6 +435,9 @@ export function FlowEditor({
                 {issues.length === 1 ? "1 problema" : `${issues.length} problemas`}
                 <ChevronDown aria-hidden="true" data-open={issuesOpen || undefined} />
               </button>
+              <span id="publish-blocked" className={styles.issuesHint}>
+                Corrige los problemas para publicar
+              </span>
               {issuesOpen && (
                 <ul id="flow-issues" className={styles.issuesList}>
                   {issues.map((issue, index) => (
@@ -509,7 +524,9 @@ export function FlowEditor({
               stepId={selectedId}
               step={selectedStep}
               isStart={selectedId === draft.startStepId}
+              steps={draft.steps}
               onChange={(step) => edit((current) => updateStep(current, selectedId, step))}
+              onSetTarget={(handle, target) => edit((current) => setTarget(current, selectedId, handle, target))}
               onMakeStart={() => edit((current) => ({ ...current, startStepId: selectedId }))}
               onDelete={() => {
                 edit((current) => removeStep(current, selectedId));

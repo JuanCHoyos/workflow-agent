@@ -34,6 +34,7 @@ function BrandMark() {
 export function AppShell({ email, businessName, children }: Props) {
   const pathname = usePathname();
   const inEditor = /^\/flows\/[^/]+/.test(pathname);
+  const pageTitle = NAV.find((item) => item.match(pathname))?.label ?? "Workflow Agent";
 
   return (
     <div className={styles.shell} data-editor={inEditor || undefined}>
@@ -76,7 +77,7 @@ export function AppShell({ email, businessName, children }: Props) {
         <Link href="/" className={styles.brand} aria-label="Workflow Agent, inicio">
           <BrandMark />
         </Link>
-        <span className={styles.topbarTitle}>{businessName ?? "Workflow Agent"}</span>
+        <span className={styles.topbarTitle}>{pageTitle}</span>
         <form action="/logout" method="post">
           <button type="submit" className="btn btn-ghost btn-icon" aria-label="Cerrar sesión">
             <LogOut />

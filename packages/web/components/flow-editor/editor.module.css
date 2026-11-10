@@ -206,6 +206,12 @@
   transform: scale(0.97);
 }
 
+.issuesHint {
+  padding-left: var(--space-1);
+  font-size: 0.8125rem;
+  color: var(--text-muted);
+}
+
 .issuesPill svg {
   width: 16px;
   height: 16px;
@@ -499,7 +505,8 @@
   height: 12px;
   background: var(--surface-raised);
   border: 2px solid var(--step-color);
-  transition: transform 150ms var(--ease-out);
+  /* "scale" composes with the library's own translate instead of replacing it. */
+  transition: scale 150ms var(--ease-out);
 }
 
 .handle:global(.react-flow__handle)::after {
@@ -519,7 +526,7 @@
 
 @media (hover: hover) and (pointer: fine) {
   .handle:global(.react-flow__handle):hover {
-    transform: translateY(-50%) scale(1.3);
+    scale: 1.3;
   }
 }
 
@@ -638,9 +645,30 @@
   }
 }
 
+@media (pointer: coarse) {
+  .issuesPill {
+    min-height: var(--control-h);
+  }
+
+  .canvas :global(.react-flow__controls-button) {
+    width: var(--control-h);
+    height: var(--control-h);
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   .issuesList,
   .addMenu {
     animation: none;
   }
+}
+
+.optionItem {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-2);
+  padding: var(--space-3);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
 }
