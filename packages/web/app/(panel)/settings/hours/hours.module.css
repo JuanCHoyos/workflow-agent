@@ -1,38 +1,70 @@
+.days {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface);
+}
+
 .day {
   display: grid;
-  grid-template-columns: 9rem 1fr auto 1fr;
+  grid-template-columns: 1fr auto;
+  grid-template-areas:
+    "name toggle"
+    "times times";
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--space-3);
+  padding: var(--space-4);
 }
 
-.toggle {
-  flex-direction: row;
+.day + .day {
+  border-top: 1px solid var(--border);
+}
+
+.dayName {
+  grid-area: name;
+  font-weight: 600;
+}
+
+.day :global(.switch) {
+  grid-area: toggle;
+}
+
+.times {
+  grid-area: times;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--space-2);
+  transition: opacity 150ms ease;
 }
 
-.toggle input {
-  width: auto;
+.closed {
+  grid-area: times;
+  display: none;
+  color: var(--text-muted);
+  font-size: 0.9375rem;
 }
 
-.saved {
-  background: var(--accent-soft);
-  color: var(--accent-strong);
-  border-radius: 8px;
-  padding: 0.6rem 0.8rem;
-  margin: 0;
+/* A closed day hides its hours and says so. */
+.day:has(:global(.switch):not(:checked)) .times {
+  display: none;
 }
 
-@media (max-width: 520px) {
+.day:has(:global(.switch):not(:checked)) .closed {
+  display: block;
+}
+
+@media (min-width: 640px) {
   .day {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 8rem auto 1fr;
+    grid-template-areas: "name toggle times";
+    gap: var(--space-4);
   }
 
-  .day > span {
-    display: none;
-  }
-
-  .toggle {
-    grid-column: 1 / -1;
+  .times,
+  .closed {
+    max-width: 320px;
   }
 }

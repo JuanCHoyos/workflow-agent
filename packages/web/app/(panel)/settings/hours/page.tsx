@@ -1,4 +1,5 @@
 import { DAY_KEYS, type BusinessHours, type DayKey } from "@workflow-agent/core";
+import { Check } from "lucide-react";
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { DAY_LABELS } from "../../../../components/flow-editor/model.ts";
@@ -47,52 +48,73 @@ export default async function BusinessHoursPage({
   const { saved, error } = await searchParams;
 
   return (
-    <div className="stack" style={{ gap: "1.5rem", maxWidth: 640 }}>
-      <div>
+    <div style={{ maxWidth: 640 }}>
+      <header className="page-header">
         <h1>Horario de atención</h1>
-        <p className="muted">
-          Las horas en que tu equipo atiende, en hora de Colombia. Los Flujos pueden usarlo con un paso
-          Condición, por ejemplo para responder distinto fuera de horario.
+        <p>
+          Las horas en que tu equipo atiende, en hora de Colombia. Tus Flujos lo pueden usar en un paso Condición,
+          por ejemplo para responder distinto fuera de horario.
         </p>
-      </div>
-      {saved && <p className={styles.saved}>Horario guardado.</p>}
-      {error && (
-        <p className="error">
-          Revisa el horario del {DAY_LABELS[error].toLowerCase()}: la hora de cierre debe ser después de la de
-          apertura.
-        </p>
-      )}
-      <form action={saveHours} className="card stack">
-        {DAY_KEYS.map((day) => {
-          const range = hours[day][0];
-          return (
-            <div key={day} className={styles.day}>
-              <label className={styles.toggle}>
-                <input type="checkbox" name={`${day}-enabled`} defaultChecked={Boolean(range)} />
-                {DAY_LABELS[day]}
-              </label>
-              <input
-                type="time"
-                name={`${day}-open`}
-                defaultValue={range?.open ?? "08:00"}
-                aria-label={`${DAY_LABELS[day]}: abre`}
-              />
-              <span className="muted">a</span>
-              <input
-                type="time"
-                name={`${day}-close`}
-                defaultValue={range?.close ?? "18:00"}
-                aria-label={`${DAY_LABELS[day]}: cierra`}
-              />
-            </div>
-          );
-        })}
-        <div>
-          <button type="submit" className="primary">
+      </header>
+      <div className="stack" style={{ gap: "var(--space-4)" }}>
+        {saved && (
+          <p className="notice notice-success" role="status">
+            <Check aria-hidden="true" />
+            Horario guardado.
+          </p>
+        )}
+        {error && (
+          <p className="notice notice-error" role="alert">
+            Revisa el {DAY_LABELS[error].toLowerCase()}: la hora de cierre debe ser después de la de apertura.
+          </p>
+        )}
+        <form action={saveHours} className="stack" style={{ gap: "var(--space-5)" }}>
+          <ul className={styles.days}>
+            {DAY_KEYS.map((day) => {
+              const range = hours[day][0];
+              return (
+                <li key={day} className={styles.day}>
+                  <label className={styles.dayName} htmlFor={`${day}-enabled`}>
+                    {DAY_LABELS[day]}
+                  </label>
+                  <input
+                    id={`${day}-enabled`}
+                    type="checkbox"
+                    role="switch"
+                    className="switch"
+                    name={`${day}-enabled`}
+                    defaultChecked={Boolean(range)}
+                    aria-label={`Abierto el ${DAY_LABELS[day].toLowerCase()}`}
+                  />
+                  <div className={styles.times}>
+                    <input
+                      type="time"
+                      className="input"
+                      name={`${day}-open`}
+                      defaultValue={range?.open ?? "08:00"}
+                      aria-label={`${DAY_LABELS[day]}: abre a las`}
+                    />
+                    <span className="muted" aria-hidden="true">
+                      a
+                    </span>
+                    <input
+                      type="time"
+                      className="input"
+                      name={`${day}-close`}
+                      defaultValue={range?.close ?? "18:00"}
+                      aria-label={`${DAY_LABELS[day]}: cierra a las`}
+                    />
+                  </div>
+                  <span className={styles.closed}>Cerrado</span>
+                </li>
+              );
+            })}
+          </ul>
+          <button type="submit" className="btn btn-primary" style={{ alignSelf: "flex-start" }}>
             Guardar horario
           </button>
-        </div>
-      </form>
+        </form>
+      </div>
     </div>
   );
 }
