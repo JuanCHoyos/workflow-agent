@@ -32,6 +32,7 @@ import {
   type StepType,
 } from "./model.ts";
 import { StepNode, type StepNodeType } from "./StepNode.tsx";
+import { Simulator } from "./Simulator.tsx";
 import { StepPanel } from "./StepPanel.tsx";
 import styles from "./editor.module.css";
 
@@ -54,6 +55,7 @@ export function FlowEditor({ flowId, initialName, initialDraft, initialPublished
   const [publishedVersion, setPublishedVersion] = useState(initialPublishedVersion);
   const [isMain, setIsMain] = useState(initialIsMain);
   const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [showSimulator, setShowSimulator] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle", text: "" });
   const [pending, startTransition] = useTransition();
@@ -237,6 +239,9 @@ export function FlowEditor({ flowId, initialName, initialDraft, initialPublished
         <span className={status.kind === "error" ? styles.statusError : "muted"} aria-live="polite">
           {dirty ? "Cambios sin guardar" : status.text}
         </span>
+        <button type="button" onClick={() => setShowSimulator((open) => !open)} aria-pressed={showSimulator}>
+          {showSimulator ? "Cerrar simulador" : "Probar"}
+        </button>
         <button type="button" onClick={save} disabled={pending || !dirty}>
           Guardar borrador
         </button>
@@ -302,7 +307,9 @@ export function FlowEditor({ flowId, initialName, initialDraft, initialPublished
           )}
         </div>
 
-        {selectedId && selectedStep ? (
+        {showSimulator ? (
+          <Simulator draft={draft} hasIssues={issues.length > 0} onClose={() => setShowSimulator(false)} />
+        ) : selectedId && selectedStep ? (
           <StepPanel
             key={selectedId}
             stepId={selectedId}
