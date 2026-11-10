@@ -35,6 +35,9 @@ export class FakeClock implements Clock {
   now() {
     return this.current;
   }
+  set(date: Date | string) {
+    this.current = new Date(date);
+  }
   advance(minutes: number) {
     this.current = new Date(this.current.getTime() + minutes * 60_000);
   }

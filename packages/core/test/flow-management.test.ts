@@ -84,3 +84,23 @@ it("lists every problem of a draft so the editor can show them before publishing
 it("finds no problems in a complete draft", () => {
   expect(findFlowIssues(singleMessageFlow("Hola"))).toEqual([]);
 });
+
+it("reports Questions without a variable and unconnected Condition branches", () => {
+  const draft: FlowDefinition = {
+    startStepId: "ask",
+    steps: {
+      ask: { type: "question", text: "¿Tu nombre?", variable: "", next: "route" },
+      route: {
+        type: "condition",
+        rules: [{ when: { kind: "withinBusinessHours" }, next: "" }],
+        otherwise: "",
+      },
+    },
+  };
+
+  expect(findFlowIssues(draft)).toEqual([
+    { code: "missingVariable", stepId: "ask" },
+    { code: "unconnected", stepId: "route", ruleIndex: 0 },
+    { code: "unconnected", stepId: "route", otherwise: true },
+  ]);
+});

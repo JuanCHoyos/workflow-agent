@@ -7,8 +7,17 @@ import { $set, UpdateItemCommand } from "dynamodb-toolbox/entity/actions/update"
 import { QueryCommand } from "dynamodb-toolbox/table/actions/query";
 import { businessEntity } from "./businesses.ts";
 import { CONVERSATION_PREFIX, conversationEntities } from "./conversations.ts";
-import { continueFrom, runSteps, type ContactInput, type Reply, type RunResult } from "./engine.ts";
-import { validateFlow, type FlowDefinition } from "./flow-definition.ts";
+import {
+  DEFAULT_TIME_ZONE,
+  continueFrom,
+  runSteps,
+  type ContactInput,
+  type Reply,
+  type RunContext,
+  type RunResult,
+  type Variables,
+} from "./engine.ts";
+import { validateFlow, type BusinessHours, type FlowDefinition } from "./flow-definition.ts";
 import { FLOW_PREFIX, flowEntities, flowSk } from "./flows.ts";
 import { businessPk } from "./keys.ts";
 import { MEMBERSHIP_PREFIX, NotAMemberError, memberEntities } from "./members.ts";
@@ -48,7 +57,7 @@ export type ConversationSummary = {
 type PublishedFlow = { flowId: string; version: number; definition: FlowDefinition };
 
 /** Where a simulated Session waits; null before it starts or after it ends. */
-export type SimulationState = { stepId: string } | null;
+export type SimulationState = { stepId: string; variables: Variables } | null;
 
 export type FlowSummary = {
   id: string;
@@ -159,19 +168,30 @@ export function createCore(dependencies: Dependencies) {
                   sessionFlowId: flow.flowId,
                   sessionFlowVersion: flow.version,
                   sessionStepId: run.waitingAt,
+                  sessionVariables: run.variables,
                 }
               : { businessId, phone, sessionOpen: false },
           )
           .send();
       }
 
-      async function continueSession(
-        phone: string,
-        session: { flowId: string; version: number; stepId: string },
-        message: InboundMessage,
-      ) {
-        const flow = await getPublishedFlow(session.flowId, session.version);
-        await applyRun(phone, flow, continueFrom(flow.definition, session.stepId, message));
+      async function getBusiness() {
+        const { Item } = await Business.build(GetItemCommand).key({ id: businessId }).send();
+        if (!Item) throw new Error(`Business ${businessId} does not exist`);
+        return Item;
+      }
+
+      /** What a run needs besides the Flow: the Session variables, the time and the business hours. */
+      function contextFor(
+        business: { timeZone?: string; businessHours?: unknown },
+        variables: Variables = {},
+      ): RunContext {
+        return {
+          variables,
+          now: clock.now(),
+          timeZone: business.timeZone ?? DEFAULT_TIME_ZONE,
+          businessHours: business.businessHours as BusinessHours | undefined,
+        };
       }
 
       return {
@@ -243,16 +263,17 @@ export function createCore(dependencies: Dependencies) {
           flowId: string,
           input: ContactInput & { state: SimulationState },
         ): Promise<SimulationTurn> {
-          const flow = await getFlow(flowId);
+          const [flow, business] = await Promise.all([getFlow(flowId), getBusiness()]);
           const draft = flow.draft as FlowDefinition | undefined;
           if (!draft) throw new Error(`Flow ${flowId} has no draft to simulate`);
           validateFlow(draft);
+          const context = contextFor(business, input.state?.variables);
           const run = input.state
-            ? continueFrom(draft, input.state.stepId, input)
-            : runSteps(draft, draft.startStepId);
+            ? continueFrom(draft, input.state.stepId, input, context)
+            : runSteps(draft, draft.startStepId, context);
           return {
             replies: run.replies,
-            state: run.waitingAt ? { stepId: run.waitingAt } : null,
+            state: run.waitingAt ? { stepId: run.waitingAt, variables: run.variables } : null,
             ended: run.waitingAt === null,
           };
         },
@@ -282,12 +303,21 @@ export function createCore(dependencies: Dependencies) {
           await Business.build(UpdateItemCommand).item({ id: businessId, mainFlowId: flowId }).send();
         },
 
+        async setBusinessHours(businessHours: BusinessHours) {
+          await getBusiness();
+          await Business.build(UpdateItemCommand)
+            .item({ id: businessId, businessHours: $set(businessHours) })
+            .send();
+        },
+
+        async getBusinessHours(): Promise<BusinessHours | null> {
+          const business = await getBusiness();
+          return (business.businessHours as BusinessHours | undefined) ?? null;
+        },
+
         async receiveInboundMessage(message: InboundMessage) {
           const { phone } = message.contact;
-          const { Item: business } = await Business.build(GetItemCommand)
-            .key({ id: businessId })
-            .send();
-          if (!business) throw new Error(`Business ${businessId} does not exist`);
+          const business = await getBusiness();
 
           const { Item: conversation } = await Conversation.build(GetItemCommand)
             .key({ businessId, phone })
@@ -296,11 +326,9 @@ export function createCore(dependencies: Dependencies) {
 
           const { sessionFlowId, sessionFlowVersion, sessionStepId } = conversation ?? {};
           if (conversation?.sessionOpen && sessionFlowId && sessionFlowVersion && sessionStepId) {
-            await continueSession(
-              phone,
-              { flowId: sessionFlowId, version: sessionFlowVersion, stepId: sessionStepId },
-              message,
-            );
+            const flow = await getPublishedFlow(sessionFlowId, sessionFlowVersion);
+            const context = contextFor(business, conversation.sessionVariables as Variables | undefined);
+            await applyRun(phone, flow, continueFrom(flow.definition, sessionStepId, message, context));
             return;
           }
 
@@ -309,7 +337,7 @@ export function createCore(dependencies: Dependencies) {
           const mainFlow = await getFlow(business.mainFlowId);
           if (!mainFlow.publishedVersion) return;
           const flow = await getPublishedFlow(mainFlow.flowId, mainFlow.publishedVersion);
-          await applyRun(phone, flow, runSteps(flow.definition, flow.definition.startStepId));
+          await applyRun(phone, flow, runSteps(flow.definition, flow.definition.startStepId, contextFor(business)));
         },
 
         async listConversations(): Promise<ConversationSummary[]> {

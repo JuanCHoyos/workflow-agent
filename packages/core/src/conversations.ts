@@ -1,4 +1,5 @@
 import { Entity } from "dynamodb-toolbox/entity";
+import { any } from "dynamodb-toolbox/schema/any";
 import { boolean } from "dynamodb-toolbox/schema/boolean";
 import { item } from "dynamodb-toolbox/schema/item";
 import { number } from "dynamodb-toolbox/schema/number";
@@ -21,6 +22,8 @@ export function conversationEntities(tables: Tables) {
       sessionFlowId: string().optional(),
       sessionFlowVersion: number().optional(),
       sessionStepId: string().optional(),
+      /** Answers to Questions collected during the open Session. */
+      sessionVariables: any().optional(),
     }),
     computeKey: ({ businessId, phone }) => ({
       pk: businessPk(businessId),
