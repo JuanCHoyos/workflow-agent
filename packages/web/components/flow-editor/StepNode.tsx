@@ -2,11 +2,21 @@
 
 import type { FlowStep } from "@workflow-agent/core/flow-definition";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
+import { Diamond, HelpCircle, ListChecks, MessageSquare, Square, type LucideIcon } from "lucide-react";
+import { memo } from "react";
 import { STEP_LABELS, describeCheck } from "./model.ts";
 import styles from "./editor.module.css";
 
 export type StepNodeData = { step: FlowStep; isStart: boolean; hasIssue: boolean };
 export type StepNodeType = Node<StepNodeData, "step">;
+
+const ICONS: Record<FlowStep["type"], LucideIcon> = {
+  message: MessageSquare,
+  optionsMenu: ListChecks,
+  question: HelpCircle,
+  condition: Diamond,
+  end: Square,
+};
 
 function Branch({ id, label, muted }: { id: string; label: string; muted?: boolean }) {
   return (
@@ -17,8 +27,9 @@ function Branch({ id, label, muted }: { id: string; label: string; muted?: boole
   );
 }
 
-export function StepNode({ data, selected }: NodeProps<StepNodeType>) {
+function StepNodeView({ data, selected }: NodeProps<StepNodeType>) {
   const { step, isStart, hasIssue } = data;
+  const Icon = ICONS[step.type];
   const classes = [styles.node, styles[`node_${step.type}`], selected && styles.nodeSelected, hasIssue && styles.nodeIssue]
     .filter(Boolean)
     .join(" ");
@@ -27,15 +38,14 @@ export function StepNode({ data, selected }: NodeProps<StepNodeType>) {
     <div className={classes}>
       <Handle type="target" position={Position.Left} className={styles.handle} />
       <div className={styles.nodeHeader}>
+        <Icon aria-hidden="true" />
         <span>{STEP_LABELS[step.type]}</span>
         {isStart && <span className={styles.startBadge}>Inicio</span>}
       </div>
       {(step.type === "message" || step.type === "optionsMenu" || step.type === "question") && (
         <p className={styles.nodeText}>{step.text || "Sin texto"}</p>
       )}
-      {step.type === "question" && (
-        <p className={styles.nodeVariable}>Guarda en {`{{${step.variable || "?"}}}`}</p>
-      )}
+      {step.type === "question" && <p className={styles.nodeVariable}>Guarda en {`{{${step.variable || "?"}}}`}</p>}
       {(step.type === "message" || step.type === "question") && (
         <Handle id="next" type="source" position={Position.Right} className={styles.handle} />
       )}
@@ -57,3 +67,6 @@ export function StepNode({ data, selected }: NodeProps<StepNodeType>) {
     </div>
   );
 }
+
+/** Memoized so dragging one step doesn't re-render every other step. */
+export const StepNode = memo(StepNodeView);

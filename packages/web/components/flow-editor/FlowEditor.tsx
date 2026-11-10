@@ -4,14 +4,30 @@ import "@xyflow/react/dist/style.css";
 import { findFlowIssues, type BusinessHours, type FlowDefinition } from "@workflow-agent/core/flow-definition";
 import {
   Background,
+  BackgroundVariant,
   Controls,
   ReactFlow,
+  applyNodeChanges,
   type Connection,
   type Edge,
   type EdgeChange,
   type NodeChange,
   type ReactFlowInstance,
 } from "@xyflow/react";
+import {
+  AlertTriangle,
+  ArrowLeft,
+  Check,
+  ChevronDown,
+  Diamond,
+  HelpCircle,
+  ListChecks,
+  MessageSquare,
+  MessagesSquare,
+  Plus,
+  Square,
+  Star,
+} from "lucide-react";
 import Link from "next/link";
 import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
 import {
@@ -20,6 +36,7 @@ import {
   saveDraftAction,
   setMainFlowAction,
 } from "../../app/(panel)/flows/actions.ts";
+import { Sheet } from "../ui/Sheet.tsx";
 import {
   STEP_LABELS,
   addStep,
@@ -32,13 +49,29 @@ import {
   type SourceHandle,
   type StepType,
 } from "./model.ts";
-import { StepNode, type StepNodeType } from "./StepNode.tsx";
 import { Simulator } from "./Simulator.tsx";
+import { StepNode, type StepNodeType } from "./StepNode.tsx";
 import { StepPanel } from "./StepPanel.tsx";
 import styles from "./editor.module.css";
 
 const NODE_TYPES = { step: StepNode };
 const EDGE_SEPARATOR = "::";
+
+const STEP_ICONS: Record<StepType, typeof MessageSquare> = {
+  message: MessageSquare,
+  optionsMenu: ListChecks,
+  question: HelpCircle,
+  condition: Diamond,
+  end: Square,
+};
+
+const STEP_HINTS: Record<StepType, string> = {
+  message: "Envía un texto",
+  optionsMenu: "Botones o lista para elegir",
+  question: "Guarda la respuesta del cliente",
+  condition: "Sigue un camino según una regla",
+  end: "Termina la conversación",
+};
 
 type Props = {
   flowId: string;
@@ -50,6 +83,11 @@ type Props = {
 };
 
 type Status = { kind: "idle" | "saved" | "error"; text: string };
+type Side = "step" | "simulator" | null;
+
+function defaultPosition(index: number) {
+  return { x: 80 + (index % 3) * 320, y: 80 + Math.floor(index / 3) * 240 };
+}
 
 export function FlowEditor({
   flowId,
@@ -61,10 +99,13 @@ export function FlowEditor({
 }: Props) {
   const [draft, setDraft] = useState<FlowDefinition>(initialDraft);
   const [name, setName] = useState(initialName);
+  const [savedName, setSavedName] = useState(initialName);
   const [publishedVersion, setPublishedVersion] = useState(initialPublishedVersion);
   const [isMain, setIsMain] = useState(initialIsMain);
   const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [showSimulator, setShowSimulator] = useState(false);
+  const [side, setSide] = useState<Side>(null);
+  const [addOpen, setAddOpen] = useState(false);
+  const [issuesOpen, setIssuesOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle", text: "" });
   const [pending, startTransition] = useTransition();
@@ -86,17 +127,39 @@ export function FlowEditor({
     setStatus({ kind: "idle", text: "" });
   }, []);
 
-  const nodes: StepNodeType[] = useMemo(
-    () =>
-      Object.entries(draft.steps).map(([id, step], index) => ({
-        id,
-        type: "step",
-        position: draft.positions?.[id] ?? { x: 80 + (index % 3) * 320, y: 80 + Math.floor(index / 3) * 240 },
-        data: { step, isStart: id === draft.startStepId, hasIssue: stepsWithIssues.has(id) },
-        selected: id === selectedId,
-      })),
-    [draft, selectedId, stepsWithIssues],
+  /*
+   * React Flow owns its node objects (they carry measured sizes). Rebuilding
+   * them from the draft on every drag frame made React Flow re-measure and hide
+   * nodes mid-drag. Now nodes live in their own state: dragging only moves
+   * them, and the draft learns the new position when the drag ends.
+   */
+  const [nodes, setNodes] = useState<StepNodeType[]>(() =>
+    Object.entries(initialDraft.steps).map(([id, step], index) => ({
+      id,
+      type: "step",
+      position: initialDraft.positions?.[id] ?? defaultPosition(index),
+      data: { step, isStart: id === initialDraft.startStepId, hasIssue: false },
+    })),
   );
+
+  useEffect(() => {
+    setNodes((current) => {
+      const byId = new Map(current.map((node) => [node.id, node]));
+      return Object.entries(draft.steps).map(([id, step], index) => {
+        const existing = byId.get(id);
+        const data = { step, isStart: id === draft.startStepId, hasIssue: stepsWithIssues.has(id) };
+        return existing
+          ? { ...existing, data, selected: id === selectedId }
+          : {
+              id,
+              type: "step" as const,
+              position: draft.positions?.[id] ?? defaultPosition(index),
+              data,
+              selected: id === selectedId,
+            };
+      });
+    });
+  }, [draft.steps, draft.startStepId, draft.positions, stepsWithIssues, selectedId]);
 
   const edges: Edge[] = useMemo(
     () =>
@@ -110,22 +173,25 @@ export function FlowEditor({
             target,
           })),
       ),
-    [draft],
+    [draft.steps],
   );
+
+  const select = useCallback((id: string | null) => {
+    setSelectedId(id);
+    setSide((current) => (id ? "step" : current === "step" ? null : current));
+  }, []);
 
   const onNodesChange = useCallback(
     (changes: NodeChange<StepNodeType>[]) => {
+      setNodes((current) => applyNodeChanges(changes, current));
       for (const change of changes) {
-        if (change.type === "position" && change.position) {
+        if (change.type === "position" && change.position && change.dragging === false) {
           const position = change.position;
           edit((current) => moveStep(current, change.id, position));
         }
         if (change.type === "remove") {
           edit((current) => removeStep(current, change.id));
           setSelectedId((current) => (current === change.id ? null : current));
-        }
-        if (change.type === "select") {
-          setSelectedId((current) => (change.selected ? change.id : current === change.id ? null : current));
         }
       }
     },
@@ -154,26 +220,26 @@ export function FlowEditor({
   );
 
   const add = (type: StepType) => {
-    // New steps appear in the middle of what the user is looking at, nudged so
-    // several additions in a row don't stack exactly on top of each other.
+    setAddOpen(false);
     const bounds = canvasRef.current?.getBoundingClientRect();
-    const center = bounds && flow
-      ? flow.screenToFlowPosition({ x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 })
-      : { x: 120, y: 120 };
+    const center =
+      bounds && flow
+        ? flow.screenToFlowPosition({ x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 })
+        : { x: 120, y: 120 };
     // Move right (then down) until the new step doesn't cover an existing one.
     const overlaps = (x: number, y: number) =>
       nodes.some((node) => Math.abs(node.position.x - x) < 270 && Math.abs(node.position.y - y) < 170);
-    let position = { x: center.x - 110, y: center.y - 60 };
+    let position = { x: center.x - 120, y: center.y - 60 };
     for (let attempt = 0; attempt < 12 && overlaps(position.x, position.y); attempt++) {
-      position = attempt % 3 === 2 ? { x: center.x - 110, y: position.y + 190 } : { x: position.x + 290, y: position.y };
+      position = attempt % 3 === 2 ? { x: center.x - 120, y: position.y + 190 } : { x: position.x + 290, y: position.y };
     }
     const result = addStep(draft, type, position);
+    edit(() => result.definition);
+    select(result.id);
     // Pan to the new step so it is always in view, keeping the current zoom.
     requestAnimationFrame(() =>
       flow?.setCenter(position.x + 120, position.y + 60, { zoom: flow.getZoom(), duration: 300 }),
     );
-    edit(() => result.definition);
-    setSelectedId(result.id);
   };
 
   const save = useCallback(() => {
@@ -206,10 +272,19 @@ export function FlowEditor({
   };
 
   const rename = () => {
-    if (name.trim() === initialName) return;
+    const trimmed = name.trim();
+    if (!trimmed || trimmed === savedName) {
+      setName(savedName);
+      return;
+    }
     startTransition(async () => {
-      const result = await renameFlowAction(flowId, name);
-      setStatus(result.ok ? { kind: "saved", text: "Nombre guardado" } : { kind: "error", text: result.error });
+      const result = await renameFlowAction(flowId, trimmed);
+      if (result.ok) {
+        setSavedName(trimmed);
+        setStatus({ kind: "saved", text: "Nombre guardado" });
+      } else {
+        setStatus({ kind: "error", text: result.error });
+      }
     });
   };
 
@@ -219,63 +294,98 @@ export function FlowEditor({
         event.preventDefault();
         save();
       }
+      if (event.key === "Escape") {
+        setAddOpen(false);
+        setIssuesOpen(false);
+      }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [save]);
 
+  // Warn before leaving with unsaved changes.
+  useEffect(() => {
+    if (!dirty) return;
+    const onBeforeUnload = (event: BeforeUnloadEvent) => event.preventDefault();
+    window.addEventListener("beforeunload", onBeforeUnload);
+    return () => window.removeEventListener("beforeunload", onBeforeUnload);
+  }, [dirty]);
+
   const selectedStep = selectedId ? draft.steps[selectedId] : undefined;
+  const statusText = dirty ? "Cambios sin guardar" : status.text;
 
   return (
-    <div className={styles.editor}>
-      <div className={styles.toolbar}>
-        <Link href="/flows" className="muted" aria-label="Volver a Flujos">
-          ← Flujos
+    <div className={styles.editor} data-side={side ?? undefined}>
+      <header className={styles.toolbar}>
+        <Link href="/flows" className="btn btn-ghost btn-icon btn-sm" aria-label="Volver a Flujos">
+          <ArrowLeft />
         </Link>
-        <input
-          className={styles.nameInput}
-          value={name}
-          maxLength={80}
-          aria-label="Nombre del Flujo"
-          onChange={(event) => setName(event.target.value)}
-          onBlur={rename}
-        />
-        <span className="muted">
-          {publishedVersion ? `Publicado · v${publishedVersion}` : "Sin publicar"}
-          {isMain && " · Principal"}
-        </span>
-        <div className="spacer" />
-        <span className={status.kind === "error" ? styles.statusError : "muted"} aria-live="polite">
-          {dirty ? "Cambios sin guardar" : status.text}
-        </span>
-        <button type="button" onClick={() => setShowSimulator((open) => !open)} aria-pressed={showSimulator}>
-          {showSimulator ? "Cerrar simulador" : "Probar"}
-        </button>
-        <button type="button" onClick={save} disabled={pending || !dirty}>
-          Guardar borrador
-        </button>
-        {!isMain && (
-          <button type="button" onClick={makeMain} disabled={pending || !publishedVersion}>
-            Usar como principal
+        <div className={styles.titleBlock}>
+          <input
+            className={styles.nameInput}
+            value={name}
+            maxLength={80}
+            aria-label="Nombre del Flujo"
+            onChange={(event) => setName(event.target.value)}
+            onBlur={rename}
+            onKeyDown={(event) => event.key === "Enter" && event.currentTarget.blur()}
+          />
+          <span className={styles.meta}>
+            {isMain && <span className="badge badge-accent">Principal</span>}
+            <span className={publishedVersion ? "badge badge-success" : "badge"}>
+              {publishedVersion ? `Publicado · v${publishedVersion}` : "Sin publicar"}
+            </span>
+            <span
+              className={status.kind === "error" && !dirty ? styles.statusError : styles.status}
+              aria-live="polite"
+            >
+              {statusText}
+            </span>
+          </span>
+        </div>
+        <div className={styles.actions}>
+          <button
+            type="button"
+            className="btn btn-sm"
+            aria-pressed={side === "simulator"}
+            onClick={() => setSide((current) => (current === "simulator" ? null : "simulator"))}
+          >
+            <MessagesSquare aria-hidden="true" />
+            <span className={styles.hideOnPhone}>Probar</span>
           </button>
-        )}
-        <button type="button" className="primary" onClick={publish} disabled={pending || issues.length > 0}>
-          Publicar
-        </button>
-      </div>
+          <button
+            type="button"
+            className="btn btn-sm"
+            onClick={save}
+            disabled={pending || !dirty}
+            aria-label="Guardar borrador"
+          >
+            <span className={styles.hideOnPhone} aria-hidden="true">
+              Guardar
+            </span>
+            <Check aria-hidden="true" className={styles.showOnPhone} />
+          </button>
+          {!isMain && publishedVersion && (
+            <button type="button" className="btn btn-sm btn-ghost" onClick={makeMain} disabled={pending}>
+              <Star aria-hidden="true" />
+              <span className={styles.hideOnPhone}>Hacer principal</span>
+            </button>
+          )}
+          <button
+            type="button"
+            className="btn btn-sm btn-primary"
+            onClick={publish}
+            disabled={pending || issues.length > 0}
+            title={issues.length > 0 ? "Corrige los problemas antes de publicar" : undefined}
+          >
+            Publicar
+          </button>
+        </div>
+      </header>
 
       <div className={styles.workspace}>
-        <div className={styles.canvasColumn}>
-          <div className={styles.addBar}>
-            <span className="muted">Agregar paso:</span>
-            {(Object.keys(STEP_LABELS) as StepType[]).map((type) => (
-              <button key={type} type="button" onClick={() => add(type)}>
-                + {STEP_LABELS[type]}
-              </button>
-            ))}
-          </div>
-          <div className={styles.canvas} ref={canvasRef}>
-            {mounted && (
+        <div className={styles.canvas} ref={canvasRef}>
+          {mounted && (
             <ReactFlow
               onInit={setFlow}
               nodes={nodes}
@@ -284,69 +394,130 @@ export function FlowEditor({
               onNodesChange={onNodesChange}
               onEdgesChange={onEdgesChange}
               onConnect={onConnect}
-              onPaneClick={() => setSelectedId(null)}
+              onNodeClick={(_, node) => select(node.id)}
+              onPaneClick={() => select(null)}
               deleteKeyCode={["Backspace", "Delete"]}
               fitView
-              fitViewOptions={{ padding: 0.3 }}
+              fitViewOptions={{ padding: 0.3, maxZoom: 1 }}
+              minZoom={0.3}
               colorMode="system"
+              defaultEdgeOptions={{ type: "smoothstep" }}
+              connectionRadius={36}
               proOptions={{ hideAttribution: true }}
             >
-              <Background gap={20} />
-              <Controls showInteractive={false} />
+              <Background variant={BackgroundVariant.Dots} gap={22} size={1.2} />
+              <Controls showInteractive={false} position="bottom-right" />
             </ReactFlow>
-            )}
-          </div>
+          )}
+
           {issues.length > 0 && (
-            <div className={styles.issues} role="status">
-              <strong>Antes de publicar, corrige:</strong>
-              <ul>
-                {issues.map((issue, index) => (
-                  <li key={index}>
-                    {"stepId" in issue ? (
-                      <button type="button" className={styles.issueLink} onClick={() => setSelectedId(issue.stepId)}>
-                        {describeIssue(issue, draft)}
-                      </button>
-                    ) : (
-                      describeIssue(issue, draft)
-                    )}
-                  </li>
-                ))}
-              </ul>
+            <div className={styles.issues}>
+              <button
+                type="button"
+                className={styles.issuesPill}
+                aria-expanded={issuesOpen}
+                aria-controls="flow-issues"
+                onClick={() => setIssuesOpen((open) => !open)}
+              >
+                <AlertTriangle aria-hidden="true" />
+                {issues.length === 1 ? "1 problema" : `${issues.length} problemas`}
+                <ChevronDown aria-hidden="true" data-open={issuesOpen || undefined} />
+              </button>
+              {issuesOpen && (
+                <ul id="flow-issues" className={styles.issuesList}>
+                  {issues.map((issue, index) => (
+                    <li key={index}>
+                      {"stepId" in issue ? (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            select(issue.stepId);
+                            setIssuesOpen(false);
+                          }}
+                        >
+                          {describeIssue(issue, draft)}
+                        </button>
+                      ) : (
+                        <span>{describeIssue(issue, draft)}</span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+
+          <div className={styles.addWrap}>
+            {addOpen && (
+              <>
+                <div className={styles.addScrim} onClick={() => setAddOpen(false)} aria-hidden="true" />
+                <ul className={styles.addMenu} role="menu" aria-label="Agregar paso">
+                  {(Object.keys(STEP_LABELS) as StepType[]).map((type) => {
+                    const Icon = STEP_ICONS[type];
+                    return (
+                      <li key={type} role="none">
+                        <button type="button" role="menuitem" onClick={() => add(type)} data-step={type}>
+                          <Icon aria-hidden="true" />
+                          <span>
+                            <strong>{STEP_LABELS[type]}</strong>
+                            <span>{STEP_HINTS[type]}</span>
+                          </span>
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              </>
+            )}
+            <button
+              type="button"
+              className={`btn btn-primary ${styles.addButton}`}
+              aria-expanded={addOpen}
+              aria-haspopup="menu"
+              onClick={() => setAddOpen((open) => !open)}
+            >
+              <Plus aria-hidden="true" />
+              Agregar paso
+            </button>
+          </div>
+
+          {Object.keys(draft.steps).length === 0 && (
+            <div className={styles.emptyCanvas}>
+              <p>Este Flujo está vacío. Agrega un Mensaje para empezar.</p>
             </div>
           )}
         </div>
 
-        {showSimulator ? (
-          <Simulator
-            draft={draft}
-            hasIssues={issues.length > 0}
-            businessHours={businessHours}
-            onClose={() => setShowSimulator(false)}
-          />
-        ) : selectedId && selectedStep ? (
-          <StepPanel
-            key={selectedId}
-            stepId={selectedId}
-            step={selectedStep}
-            isStart={selectedId === draft.startStepId}
-            onChange={(step) => edit((current) => updateStep(current, selectedId, step))}
-            onMakeStart={() => edit((current) => ({ ...current, startStepId: selectedId }))}
-            onDelete={() => {
-              edit((current) => removeStep(current, selectedId));
-              setSelectedId(null);
-            }}
-          />
-        ) : (
-          <aside className={styles.panel}>
-            <h2 style={{ margin: 0 }}>Cómo editar</h2>
-            <ul className={styles.help}>
-              <li>Haz clic en un paso para editar su texto u opciones.</li>
-              <li>Arrastra desde el punto derecho de un paso (o de una opción) hasta otro paso para conectarlos.</li>
-              <li>Selecciona una conexión o un paso y presiona Suprimir para borrarlo.</li>
-              <li>Guarda con Ctrl + S. Los clientes solo ven la versión publicada.</li>
-            </ul>
-          </aside>
-        )}
+        <Sheet
+          open={side === "simulator"}
+          title="Simulador"
+          onClose={() => setSide(null)}
+          label="Simulador del Flujo"
+        >
+          <Simulator draft={draft} hasIssues={issues.length > 0} businessHours={businessHours} />
+        </Sheet>
+
+        <Sheet
+          open={side === "step" && Boolean(selectedStep)}
+          title={selectedStep ? STEP_LABELS[selectedStep.type] : "Paso"}
+          onClose={() => select(null)}
+          label="Editar paso"
+        >
+          {selectedId && selectedStep && (
+            <StepPanel
+              key={selectedId}
+              stepId={selectedId}
+              step={selectedStep}
+              isStart={selectedId === draft.startStepId}
+              onChange={(step) => edit((current) => updateStep(current, selectedId, step))}
+              onMakeStart={() => edit((current) => ({ ...current, startStepId: selectedId }))}
+              onDelete={() => {
+                edit((current) => removeStep(current, selectedId));
+                select(null);
+              }}
+            />
+          )}
+        </Sheet>
       </div>
     </div>
   );
