@@ -5,7 +5,10 @@ import { requireEditor } from "../../../../lib/editor-access.ts";
 export default async function FlowEditorPage({ params }: { params: Promise<{ flowId: string }> }) {
   const { flowId } = await params;
   const { business } = await requireEditor();
-  const flow = await business.getFlowForEditing(flowId).catch(() => notFound());
+  const [flow, businessHours] = await Promise.all([
+    business.getFlowForEditing(flowId).catch(() => notFound()),
+    business.getBusinessHours(),
+  ]);
 
   return (
     <FlowEditor
@@ -14,6 +17,7 @@ export default async function FlowEditorPage({ params }: { params: Promise<{ flo
       initialDraft={flow.draft ?? { startStepId: "", steps: {} }}
       initialPublishedVersion={flow.publishedVersion}
       initialIsMain={flow.isMain}
+      businessHours={businessHours}
     />
   );
 }

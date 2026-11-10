@@ -2,11 +2,20 @@
 
 import type { FlowStep } from "@workflow-agent/core/flow-definition";
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { STEP_LABELS } from "./model.ts";
+import { STEP_LABELS, describeCheck } from "./model.ts";
 import styles from "./editor.module.css";
 
 export type StepNodeData = { step: FlowStep; isStart: boolean; hasIssue: boolean };
 export type StepNodeType = Node<StepNodeData, "step">;
+
+function Branch({ id, label, muted }: { id: string; label: string; muted?: boolean }) {
+  return (
+    <li className={`${styles.nodeOption} ${muted ? styles.nodeOptionMuted : ""}`}>
+      <span>{label}</span>
+      <Handle id={id} type="source" position={Position.Right} className={styles.handle} />
+    </li>
+  );
+}
 
 export function StepNode({ data, selected }: NodeProps<StepNodeType>) {
   const { step, isStart, hasIssue } = data;
@@ -21,23 +30,28 @@ export function StepNode({ data, selected }: NodeProps<StepNodeType>) {
         <span>{STEP_LABELS[step.type]}</span>
         {isStart && <span className={styles.startBadge}>Inicio</span>}
       </div>
-      {step.type !== "end" && <p className={styles.nodeText}>{step.text || "Sin texto"}</p>}
-      {step.type === "message" && (
+      {(step.type === "message" || step.type === "optionsMenu" || step.type === "question") && (
+        <p className={styles.nodeText}>{step.text || "Sin texto"}</p>
+      )}
+      {step.type === "question" && (
+        <p className={styles.nodeVariable}>Guarda en {`{{${step.variable || "?"}}}`}</p>
+      )}
+      {(step.type === "message" || step.type === "question") && (
         <Handle id="next" type="source" position={Position.Right} className={styles.handle} />
       )}
       {step.type === "optionsMenu" && (
         <ul className={styles.nodeOptions}>
           {step.options.map((option, index) => (
-            <li key={index} className={styles.nodeOption}>
-              <span>{option.label || `Opción ${index + 1}`}</span>
-              <Handle
-                id={`option-${index}`}
-                type="source"
-                position={Position.Right}
-                className={styles.handle}
-              />
-            </li>
+            <Branch key={index} id={`option-${index}`} label={option.label || `Opción ${index + 1}`} />
           ))}
+        </ul>
+      )}
+      {step.type === "condition" && (
+        <ul className={styles.nodeOptions}>
+          {step.rules.map((rule, index) => (
+            <Branch key={index} id={`rule-${index}`} label={describeCheck(rule.when)} />
+          ))}
+          <Branch id="otherwise" label="Si no" muted />
         </ul>
       )}
     </div>

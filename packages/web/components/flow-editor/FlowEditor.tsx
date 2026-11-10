@@ -1,7 +1,7 @@
 "use client";
 
 import "@xyflow/react/dist/style.css";
-import { findFlowIssues, type FlowDefinition } from "@workflow-agent/core/flow-definition";
+import { findFlowIssues, type BusinessHours, type FlowDefinition } from "@workflow-agent/core/flow-definition";
 import {
   Background,
   Controls,
@@ -23,6 +23,7 @@ import {
 import {
   STEP_LABELS,
   addStep,
+  connectionsOf,
   describeIssue,
   moveStep,
   removeStep,
@@ -45,11 +46,19 @@ type Props = {
   initialDraft: FlowDefinition;
   initialPublishedVersion: number | null;
   initialIsMain: boolean;
+  businessHours: BusinessHours | null;
 };
 
 type Status = { kind: "idle" | "saved" | "error"; text: string };
 
-export function FlowEditor({ flowId, initialName, initialDraft, initialPublishedVersion, initialIsMain }: Props) {
+export function FlowEditor({
+  flowId,
+  initialName,
+  initialDraft,
+  initialPublishedVersion,
+  initialIsMain,
+  businessHours,
+}: Props) {
   const [draft, setDraft] = useState<FlowDefinition>(initialDraft);
   const [name, setName] = useState(initialName);
   const [publishedVersion, setPublishedVersion] = useState(initialPublishedVersion);
@@ -91,26 +100,16 @@ export function FlowEditor({ flowId, initialName, initialDraft, initialPublished
 
   const edges: Edge[] = useMemo(
     () =>
-      Object.entries(draft.steps).flatMap(([id, step]) => {
-        if (step.type === "message" && draft.steps[step.next]) {
-          return [{ id: `${id}${EDGE_SEPARATOR}next`, source: id, sourceHandle: "next", target: step.next }];
-        }
-        if (step.type === "optionsMenu") {
-          return step.options.flatMap((option, index) =>
-            draft.steps[option.next]
-              ? [
-                  {
-                    id: `${id}${EDGE_SEPARATOR}option-${index}`,
-                    source: id,
-                    sourceHandle: `option-${index}`,
-                    target: option.next,
-                  },
-                ]
-              : [],
-          );
-        }
-        return [];
-      }),
+      Object.entries(draft.steps).flatMap(([id, step]) =>
+        connectionsOf(step)
+          .filter(({ target }) => draft.steps[target])
+          .map(({ handle, target }) => ({
+            id: `${id}${EDGE_SEPARATOR}${handle}`,
+            source: id,
+            sourceHandle: handle,
+            target,
+          })),
+      ),
     [draft],
   );
 
@@ -161,8 +160,18 @@ export function FlowEditor({ flowId, initialName, initialDraft, initialPublished
     const center = bounds && flow
       ? flow.screenToFlowPosition({ x: bounds.left + bounds.width / 2, y: bounds.top + bounds.height / 2 })
       : { x: 120, y: 120 };
-    const nudge = (Object.keys(draft.steps).length % 5) * 24;
-    const result = addStep(draft, type, { x: center.x - 110 + nudge, y: center.y - 50 + nudge });
+    // Move right (then down) until the new step doesn't cover an existing one.
+    const overlaps = (x: number, y: number) =>
+      nodes.some((node) => Math.abs(node.position.x - x) < 270 && Math.abs(node.position.y - y) < 170);
+    let position = { x: center.x - 110, y: center.y - 60 };
+    for (let attempt = 0; attempt < 12 && overlaps(position.x, position.y); attempt++) {
+      position = attempt % 3 === 2 ? { x: center.x - 110, y: position.y + 190 } : { x: position.x + 290, y: position.y };
+    }
+    const result = addStep(draft, type, position);
+    // Pan to the new step so it is always in view, keeping the current zoom.
+    requestAnimationFrame(() =>
+      flow?.setCenter(position.x + 120, position.y + 60, { zoom: flow.getZoom(), duration: 300 }),
+    );
     edit(() => result.definition);
     setSelectedId(result.id);
   };
@@ -308,7 +317,12 @@ export function FlowEditor({ flowId, initialName, initialDraft, initialPublished
         </div>
 
         {showSimulator ? (
-          <Simulator draft={draft} hasIssues={issues.length > 0} onClose={() => setShowSimulator(false)} />
+          <Simulator
+            draft={draft}
+            hasIssues={issues.length > 0}
+            businessHours={businessHours}
+            onClose={() => setShowSimulator(false)}
+          />
         ) : selectedId && selectedStep ? (
           <StepPanel
             key={selectedId}
