@@ -1,29 +1,18 @@
-import Link from "next/link";
+import { cookies } from "next/headers";
 import type { ReactNode } from "react";
-import { requireUser } from "../../lib/auth.ts";
-import styles from "./panel.module.css";
+import { AppShell } from "../../components/shell/AppShell.tsx";
+import { BUSINESS_COOKIE, requireUser } from "../../lib/auth.ts";
+import { getCore } from "../../lib/core.ts";
 
 export default async function PanelLayout({ children }: { children: ReactNode }) {
   const user = await requireUser();
+  const memberships = await getCore().businessesOf(user.userId);
+  const selected = (await cookies()).get(BUSINESS_COOKIE)?.value;
+  const business = memberships.find((m) => m.businessId === selected) ?? memberships[0];
 
   return (
-    <div className={styles.shell}>
-      <header className={styles.header}>
-        <Link href="/" className={styles.brand}>
-          Workflow Agent
-        </Link>
-        <nav className={styles.nav}>
-          <Link href="/">Inicio</Link>
-          <Link href="/flows">Flujos</Link>
-          <Link href="/settings/hours">Horario</Link>
-        </nav>
-        <div className="spacer" />
-        <span className="muted">{user.email}</span>
-        <form action="/logout" method="post">
-          <button type="submit">Salir</button>
-        </form>
-      </header>
-      <main className={styles.main}>{children}</main>
-    </div>
+    <AppShell email={user.email} businessName={business?.name ?? null}>
+      {children}
+    </AppShell>
   );
 }
