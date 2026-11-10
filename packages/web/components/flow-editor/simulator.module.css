@@ -1,0 +1,124 @@
+.simulator {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  display: flex;
+  flex-direction: column;
+  height: calc(62vh + 3rem);
+  min-height: 460px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem 0.9rem;
+  border-bottom: 1px solid var(--border);
+}
+
+.hint {
+  margin: 0.1rem 0 0;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.warning {
+  margin: 0;
+  padding: 0.45rem 0.9rem;
+  font-size: 0.8rem;
+  background: var(--warning-soft);
+}
+
+.chat {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.9rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  background:
+    radial-gradient(circle at 1px 1px, var(--border) 1px, transparent 0) 0 0 / 18px 18px,
+    var(--surface-muted);
+}
+
+.empty,
+.ended {
+  margin: auto 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.ended {
+  margin: 0.5rem 0;
+}
+
+.lineGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.bot,
+.contact {
+  max-width: 85%;
+  padding: 0.45rem 0.7rem;
+  border-radius: 10px;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+}
+
+.bot {
+  align-self: flex-start;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-top-left-radius: 2px;
+}
+
+.contact {
+  align-self: flex-end;
+  background: var(--accent-soft);
+  color: var(--text);
+  border-top-right-radius: 2px;
+}
+
+.buttons {
+  align-self: flex-start;
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  width: min(85%, 260px);
+}
+
+.optionButton {
+  justify-content: center;
+  color: var(--accent);
+  font-size: 0.85rem;
+  background: var(--surface);
+}
+
+.list {
+  list-style: none;
+  margin: 0;
+  padding: 0.3rem;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+
+.list button {
+  width: 100%;
+  border: none;
+  justify-content: flex-start;
+  font-weight: 400;
+  font-size: 0.85rem;
+}
+
+.composer {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.65rem;
+  border-top: 1px solid var(--border);
+}
