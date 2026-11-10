@@ -8,7 +8,9 @@ import { createTables } from "@workflow-agent/core";
 
 const root = join(import.meta.dirname, "..");
 const DEV_DATA_DIR = join(root, ".dev");
-const DYNAMODB_ENDPOINT = "http://localhost:8000";
+// Port 8001 with a Docker volume, so local data survives restarts. Tests use
+// a separate in-memory DynamoDB Local on port 8000.
+const DYNAMODB_ENDPOINT = "http://localhost:8001";
 const tables = { businesses: "local-Businesses", conversations: "local-Conversations" };
 
 const dynamodb = new DynamoDBClient({
@@ -29,8 +31,9 @@ async function dynamoIsUp() {
 if (!(await dynamoIsUp())) {
   console.log("[dev] starting DynamoDB Local in Docker…");
   execFileSync("docker", [
-    "run", "-d", "--rm", "--name", "workflow-agent-dynamodb-local", "-p", "8000:8000",
-    "amazon/dynamodb-local", "-jar", "DynamoDBLocal.jar", "-inMemory", "-sharedDb",
+    "run", "-d", "--rm", "--name", "workflow-agent-dynamodb-dev", "-p", "8001:8000",
+    "-v", "workflow-agent-dynamodb-dev:/home/dynamodblocal/data", "--user", "root",
+    "amazon/dynamodb-local", "-jar", "DynamoDBLocal.jar", "-sharedDb", "-dbPath", "./data",
   ]);
   while (!(await dynamoIsUp())) await new Promise((resolve) => setTimeout(resolve, 500));
 }
