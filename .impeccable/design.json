@@ -1,0 +1,196 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-10T00:00:00Z",
+  "title": "Design System: Workflow Agent",
+  "extensions": {
+    "colorMeta": {
+      "clay": { "role": "primary", "displayName": "Clay", "canonical": "#b85a38", "lightValue": "#b85a38", "cssVar": "--accent", "tonalRamp": ["#3a1c12", "#5a2b1c", "#7d3c26", "#a64f30", "#b85a38", "#d97757", "#e8957a", "#f6d3c6"] },
+      "clay-deep": { "role": "primary", "displayName": "Deep Clay", "canonical": "#a64f30", "lightValue": "#a64f30", "cssVar": "--accent-hover" },
+      "clay-text": { "role": "primary", "displayName": "Clay Ink", "canonical": "#e8957a", "lightValue": "#9c4a2c", "cssVar": "--accent-text" },
+      "clay-soft": { "role": "primary", "displayName": "Clay Wash", "canonical": "rgb(217 119 87 / 16%)", "lightValue": "rgb(217 119 87 / 14%)", "cssVar": "--accent-soft" },
+      "on-clay": { "role": "primary", "displayName": "On Clay", "canonical": "#ffffff", "lightValue": "#ffffff", "cssVar": "--on-accent" },
+      "focus-clay": { "role": "primary", "displayName": "Focus Clay", "canonical": "#e8957a", "lightValue": "#c6613f", "cssVar": "--focus" },
+      "ground-shell": { "role": "neutral", "displayName": "Shell Black", "canonical": "#1f1e1d", "lightValue": "#ecebe3", "cssVar": "--bg-shell", "tonalRamp": ["#1c1b1a", "#1f1e1d", "#262624", "#2b2a28", "#30302e", "#a8a69d", "#d7d5cc", "#faf9f5"] },
+      "ground": { "role": "neutral", "displayName": "Work Ground", "canonical": "#262624", "lightValue": "#f5f4ee", "cssVar": "--bg" },
+      "surface": { "role": "neutral", "displayName": "Surface", "canonical": "#2b2a28", "lightValue": "#fbfaf6", "cssVar": "--surface" },
+      "surface-raised": { "role": "neutral", "displayName": "Raised Surface", "canonical": "#30302e", "lightValue": "#ffffff", "cssVar": "--surface-raised" },
+      "surface-sunken": { "role": "neutral", "displayName": "Sunken Well", "canonical": "#1c1b1a", "lightValue": "#e9e7de", "cssVar": "--surface-sunken" },
+      "hover-veil": { "role": "neutral", "displayName": "Hover Veil", "canonical": "rgb(250 249 245 / 6%)", "lightValue": "rgb(20 20 19 / 6%)", "cssVar": "--hover" },
+      "pressed-veil": { "role": "neutral", "displayName": "Pressed Veil", "canonical": "rgb(250 249 245 / 10%)", "lightValue": "rgb(20 20 19 / 10%)", "cssVar": "--pressed" },
+      "hairline": { "role": "neutral", "displayName": "Hairline", "canonical": "rgb(222 220 209 / 13%)", "lightValue": "rgb(20 20 19 / 12%)", "cssVar": "--border" },
+      "hairline-strong": { "role": "neutral", "displayName": "Strong Hairline", "canonical": "rgb(222 220 209 / 24%)", "lightValue": "rgb(20 20 19 / 22%)", "cssVar": "--border-strong" },
+      "ivory": { "role": "neutral", "displayName": "Ivory", "canonical": "#faf9f5", "lightValue": "#141413", "cssVar": "--text" },
+      "sand-secondary": { "role": "neutral", "displayName": "Sand", "canonical": "#d7d5cc", "lightValue": "#4d4c48", "cssVar": "--text-secondary" },
+      "sand-muted": { "role": "neutral", "displayName": "Muted Sand", "canonical": "#a8a69d", "lightValue": "#6b6a64", "cssVar": "--text-muted" },
+      "scrim": { "role": "neutral", "displayName": "Scrim", "canonical": "rgb(10 10 9 / 62%)", "lightValue": "rgb(20 20 19 / 40%)", "cssVar": "--scrim" },
+      "danger": { "role": "status", "displayName": "Danger", "canonical": "#f2a299", "lightValue": "#b3261e", "cssVar": "--danger" },
+      "danger-soft": { "role": "status", "displayName": "Danger Wash", "canonical": "rgb(242 162 153 / 12%)", "lightValue": "rgb(179 38 30 / 10%)", "cssVar": "--danger-soft" },
+      "warning-text": { "role": "status", "displayName": "Warning", "canonical": "#f0c56d", "lightValue": "#7a5300", "cssVar": "--warning-text" },
+      "warning-soft": { "role": "status", "displayName": "Warning Wash", "canonical": "rgb(240 197 109 / 12%)", "lightValue": "rgb(196 140 26 / 16%)", "cssVar": "--warning-soft" },
+      "success-text": { "role": "status", "displayName": "Success", "canonical": "#8fd19e", "lightValue": "#2f6b3a", "cssVar": "--success-text" },
+      "success-soft": { "role": "status", "displayName": "Success Wash", "canonical": "rgb(143 209 158 / 12%)", "lightValue": "rgb(60 140 80 / 14%)", "cssVar": "--success-soft" },
+      "step-message": { "role": "step", "displayName": "Message", "canonical": "#d97757", "lightValue": "#b85a38", "cssVar": "--step-message" },
+      "step-menu": { "role": "step", "displayName": "Options Menu", "canonical": "#a48ad6", "lightValue": "#7e63b8", "cssVar": "--step-menu" },
+      "step-question": { "role": "step", "displayName": "Question", "canonical": "#d9a441", "lightValue": "#a87618", "cssVar": "--step-question" },
+      "step-condition": { "role": "step", "displayName": "Condition", "canonical": "#6f9fe0", "lightValue": "#3e72b8", "cssVar": "--step-condition" },
+      "step-end": { "role": "step", "displayName": "End", "canonical": "#8f8d85", "lightValue": "#8a8880", "cssVar": "--step-end" }
+    },
+    "typographyMeta": {
+      "headline": { "displayName": "Headline", "purpose": "Page titles (h1), balanced wrap." },
+      "title": { "displayName": "Title", "purpose": "Section titles (h2)." },
+      "title-sm": { "displayName": "Title small", "purpose": "Sheet titles, Flow name in the editor toolbar (h3)." },
+      "body": { "displayName": "Body", "purpose": "Running text and inputs; 16px so iOS never zooms." },
+      "control": { "displayName": "Control", "purpose": "Buttons, nav items, simulator options." },
+      "label": { "displayName": "Label", "purpose": "Field labels, chip toggles, small buttons." },
+      "caption": { "displayName": "Caption", "purpose": "Hints, save status, menu descriptions." },
+      "voice": { "displayName": "Voice", "purpose": "The bot's replies in the simulator, unboxed. Nowhere else." },
+      "mono": { "displayName": "Mono", "purpose": "Variable names in steps and the simulator." }
+    },
+    "shadows": [
+      { "name": "shadow-sm", "value": "0 1px 2px rgb(0 0 0 / 30%)", "light": "0 1px 2px rgb(20 20 19 / 8%)", "purpose": "Step nodes resting on the canvas." },
+      { "name": "shadow-md", "value": "0 6px 20px -4px rgb(0 0 0 / 45%), 0 1px 3px rgb(0 0 0 / 30%)", "light": "0 4px 16px -2px rgb(20 20 19 / 12%), 0 1px 3px rgb(20 20 19 / 8%)", "purpose": "Floating controls: add-step button, issues list, canvas controls, phone save bar, selected step." },
+      { "name": "shadow-lg", "value": "0 20px 48px -10px rgb(0 0 0 / 60%), 0 2px 8px rgb(0 0 0 / 35%)", "light": "0 16px 40px -8px rgb(20 20 19 / 24%), 0 2px 6px rgb(20 20 19 / 10%)", "purpose": "Overlays: bottom sheet, dialog, add-step menu." },
+      { "name": "selected-ring", "value": "0 0 0 3px var(--accent-soft), var(--shadow-md)", "purpose": "Selected step node." },
+      { "name": "focus-halo", "value": "0 0 0 3px var(--accent-soft)", "purpose": "Focused input, with focus-clay border." },
+      { "name": "drag-lift", "value": "drop-shadow(0 12px 20px rgb(0 0 0 / 28%))", "purpose": "Filter on a step while it is dragged." }
+    ],
+    "motion": [
+      { "name": "ease-out", "value": "cubic-bezier(0.23, 1, 0.32, 1)", "purpose": "Press scale (160ms), pop-in menus (180ms), dialog (200ms), switch thumb, message entry (220ms)." },
+      { "name": "ease-in-out", "value": "cubic-bezier(0.77, 0, 0.175, 1)", "purpose": "Defined for on-screen movement; not yet used by a shipped component." },
+      { "name": "ease-drawer", "value": "cubic-bezier(0.32, 0.72, 0, 1)", "purpose": "Bottom sheet slide (420ms)." },
+      { "name": "state-change", "value": "150ms ease", "purpose": "Color, border and background transitions." },
+      { "name": "reduced-motion", "value": "prefers-reduced-motion: reduce", "purpose": "Transforms removed; sheet and dialog fall back to a 200ms fade; pop-in and message animations off." }
+    ],
+    "breakpoints": [
+      { "name": "row", "value": "640px", "purpose": "Rows go horizontal (home next step, Flow creation, hours)." },
+      { "name": "desktop", "value": "900px", "purpose": "Sidebar replaces top bar and tab bar; sheets dock right at 380px." },
+      { "name": "coarse-pointer", "value": "(pointer: coarse)", "purpose": "All compact controls grow to 44px." }
+    ],
+    "accessibility": [
+      "WCAG 2.2 AA target; text pairings checked on warm grounds.",
+      "44px targets on coarse pointers; invisible hit-area extensions on the switch and canvas handles.",
+      "Steps focusable with Tab; Enter or Space opens the focused step's panel.",
+      "Selects in the step panel set connections as an alternative to dragging.",
+      "Phone sheet: dialog semantics, inert background, focuses itself, returns focus to the opener, Escape closes.",
+      "2px focus-clay outline with 2px offset; skip link; scroll padding clears the fixed bars.",
+      "Hover effects only on fine pointers; reduced-motion paths on every animation."
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The single filled action of a view: Publicar, Agregar paso, Guardar horario.",
+      "html": "<button class=\"ds-btn ds-btn-primary\">Publicar</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 44px; padding: 0 16px; border: 1px solid var(--border-strong, rgb(222 220 209 / 24%)); border-radius: 10px; background: transparent; color: var(--text, #faf9f5); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 550; line-height: 1; cursor: pointer; transition: background-color 150ms ease, border-color 150ms ease, color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-btn:active { transform: scale(0.97); } .ds-btn:focus-visible { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; } .ds-btn-primary { background: var(--accent, #b85a38); color: var(--on-accent, #ffffff); border-color: transparent; } .ds-btn-primary:hover { background: var(--accent-hover, #a64f30); }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Default button: transparent with a strong hairline border.",
+      "html": "<button class=\"ds-btn2\">Guardar</button>",
+      "css": ".ds-btn2 { display: inline-flex; align-items: center; justify-content: center; min-height: 44px; padding: 0 16px; border: 1px solid var(--border-strong, rgb(222 220 209 / 24%)); border-radius: 10px; background: transparent; color: var(--text, #faf9f5); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 550; line-height: 1; cursor: pointer; transition: background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-btn2:hover { background: var(--hover, rgb(250 249 245 / 6%)); } .ds-btn2:active { transform: scale(0.97); } .ds-btn2:focus-visible { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Toggle Button (pressed)",
+      "kind": "button",
+      "refersTo": "button-toggle-on",
+      "description": "aria-pressed on state, e.g. the editor's Probar button while the simulator is open.",
+      "html": "<button class=\"ds-btn-toggle\" aria-pressed=\"true\">Probar</button>",
+      "css": ".ds-btn-toggle { display: inline-flex; align-items: center; min-height: 44px; padding: 0 16px; border: 1px solid color-mix(in srgb, var(--accent-text, #e8957a) 50%, transparent); border-radius: 10px; background: var(--accent-soft, rgb(217 119 87 / 16%)); color: var(--accent-text, #e8957a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 550; line-height: 1; cursor: pointer; } .ds-btn-toggle:focus-visible { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Text Input",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Sunken field with focus-clay border and clay-wash halo.",
+      "html": "<input class=\"ds-input\" placeholder=\"Escribe un mensaje\" />",
+      "css": ".ds-input { width: 100%; min-height: 44px; padding: 0 12px; border: 1px solid var(--border-strong, rgb(222 220 209 / 24%)); border-radius: 10px; background: var(--surface-sunken, #1c1b1a); color: var(--text, #faf9f5); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 1rem; transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-input::placeholder { color: var(--text-muted, #a8a69d); } .ds-input:focus { outline: none; border-color: var(--focus, #e8957a); box-shadow: 0 0 0 3px var(--accent-soft, rgb(217 119 87 / 16%)); }"
+    },
+    {
+      "name": "Day Chip Toggle",
+      "kind": "chip",
+      "refersTo": "chip-toggle",
+      "description": "Pill toggle for days of the week; checked state uses the clay wash.",
+      "html": "<label class=\"ds-chip\"><input type=\"checkbox\" checked /><span>Lun</span></label> <label class=\"ds-chip\"><input type=\"checkbox\" /><span>Mar</span></label>",
+      "css": ".ds-chip { position: relative; display: inline-flex; } .ds-chip input { position: absolute; inset: 0; opacity: 0; margin: 0; cursor: pointer; } .ds-chip span { display: inline-flex; align-items: center; min-height: 36px; padding: 0 12px; border: 1px solid var(--border-strong, rgb(222 220 209 / 24%)); border-radius: 999px; font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; font-weight: 550; color: var(--text-secondary, #d7d5cc); transition: background-color 150ms ease, color 150ms ease, border-color 150ms ease; } .ds-chip input:checked + span { background: var(--accent-soft, rgb(217 119 87 / 16%)); border-color: transparent; color: var(--accent-text, #e8957a); } .ds-chip input:focus-visible + span { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Switch",
+      "kind": "input",
+      "refersTo": "switch",
+      "description": "Checkbox with role=switch; clay track when on, extended invisible hit area.",
+      "html": "<input type=\"checkbox\" role=\"switch\" class=\"ds-switch\" checked aria-label=\"Abierto\" />",
+      "css": ".ds-switch { appearance: none; position: relative; width: 44px; height: 26px; margin: 0; border-radius: 999px; background: var(--border-strong, rgb(222 220 209 / 24%)); cursor: pointer; transition: background-color 200ms ease; } .ds-switch::before { content: ''; position: absolute; inset: -9px; } .ds-switch::after { content: ''; position: absolute; top: 3px; left: 3px; width: 20px; height: 20px; border-radius: 50%; background: #ffffff; box-shadow: 0 1px 3px rgb(0 0 0 / 30%); transition: transform 200ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-switch:checked { background: var(--accent, #b85a38); } .ds-switch:checked::after { transform: translateX(18px); } .ds-switch:focus-visible { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Sidebar Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Desktop sidebar rows; current item on the pressed veil.",
+      "html": "<nav class=\"ds-nav\"><a href=\"#\">Inicio</a><a href=\"#\" aria-current=\"page\">Flujos</a><a href=\"#\">Horario</a></nav>",
+      "css": ".ds-nav { display: flex; flex-direction: column; gap: 2px; width: 224px; padding: 12px; background: var(--bg-shell, #1f1e1d); } .ds-nav a { display: flex; align-items: center; min-height: 40px; padding: 0 12px; border-radius: 10px; color: var(--text-secondary, #d7d5cc); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 550; text-decoration: none; transition: background-color 150ms ease, color 150ms ease; } .ds-nav a:hover:not([aria-current]) { background: var(--hover, rgb(250 249 245 / 6%)); color: var(--text, #faf9f5); } .ds-nav a[aria-current='page'] { background: var(--pressed, rgb(250 249 245 / 10%)); color: var(--text, #faf9f5); } .ds-nav a:focus-visible { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; }"
+    },
+    {
+      "name": "Grouped List Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "One bordered surface container with hairline dividers between rows (Flows list, hours, home status).",
+      "html": "<ul class=\"ds-list\"><li><strong>Bienvenida</strong><span class=\"ds-badge\">Publicado</span></li><li><strong>Prueba de condiciones</strong><span class=\"ds-badge\">Sin publicar</span></li></ul>",
+      "css": ".ds-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--border, rgb(222 220 209 / 13%)); border-radius: 14px; background: var(--surface, #2b2a28); overflow: hidden; font-family: ui-sans-serif, system-ui, sans-serif; color: var(--text, #faf9f5); } .ds-list li { display: flex; align-items: center; gap: 12px; min-height: 64px; padding: 12px 16px; transition: background-color 150ms ease; } .ds-list li + li { border-top: 1px solid var(--border, rgb(222 220 209 / 13%)); } .ds-list li:hover { background: var(--hover, rgb(250 249 245 / 6%)); } .ds-badge { display: inline-flex; align-items: center; min-height: 22px; padding: 0 8px; border-radius: 999px; background: var(--hover, rgb(250 249 245 / 6%)); color: var(--text-secondary, #d7d5cc); font-size: 0.75rem; font-weight: 600; }"
+    },
+    {
+      "name": "Step Node",
+      "kind": "custom",
+      "refersTo": "step-node",
+      "description": "Canvas step: raised card, type hue only on the header icon and handle; selected gets clay ink border and wash ring.",
+      "html": "<div class=\"ds-node ds-node-selected\" style=\"--step-color: var(--step-menu, #a48ad6)\"><div class=\"ds-node-head\"><svg viewBox=\"0 0 24 24\" width=\"15\" height=\"15\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"2\" stroke-linecap=\"round\"><path d=\"M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01\"/></svg><span>Menú de opciones</span><span class=\"ds-node-badge\">Inicio</span></div><p class=\"ds-node-text\">¿Qué quieres hacer?</p><div class=\"ds-node-opt\">Opción 1</div><div class=\"ds-node-opt\">Opción 2</div></div>",
+      "css": ".ds-node { width: 248px; padding: 12px; background: var(--surface-raised, #30302e); border: 1px solid var(--border-strong, rgb(222 220 209 / 24%)); border-radius: 14px; box-shadow: var(--shadow-sm, 0 1px 2px rgb(0 0 0 / 30%)); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.875rem; color: var(--text, #faf9f5); transition: border-color 150ms ease, box-shadow 150ms ease; } .ds-node-selected { border-color: var(--accent-text, #e8957a); box-shadow: 0 0 0 3px var(--accent-soft, rgb(217 119 87 / 16%)), var(--shadow-md, 0 6px 20px -4px rgb(0 0 0 / 45%)); } .ds-node-head { display: flex; align-items: center; gap: 8px; font-size: 0.75rem; font-weight: 650; letter-spacing: 0.01em; color: var(--text-secondary, #d7d5cc); } .ds-node-head svg { color: var(--step-color); flex: none; } .ds-node-head span:first-of-type { flex: 1; } .ds-node-badge { padding: 1px 8px; border-radius: 999px; background: var(--accent-soft, rgb(217 119 87 / 16%)); color: var(--accent-text, #e8957a); font-size: 0.6875rem; } .ds-node-text { margin: 8px 0 0; line-height: 1.45; } .ds-node-opt { margin-top: 4px; padding: 6px 12px; border-radius: 8px; background: var(--surface-sunken, #1c1b1a); color: var(--text-secondary, #d7d5cc); }"
+    },
+    {
+      "name": "Simulator Conversation",
+      "kind": "custom",
+      "refersTo": "simulator-contact-bubble",
+      "description": "Signature: bot replies unboxed in the serif voice, Contact messages in clay bubbles, options as raised buttons.",
+      "html": "<div class=\"ds-chat\"><div class=\"ds-contact\">hola</div><div class=\"ds-bot\">¡Hola! Gracias por escribirnos.<br/><br/>¿Qué quieres hacer?</div><button class=\"ds-opt\">Opción 1</button><button class=\"ds-opt\">Opción 2</button></div>",
+      "css": ".ds-chat { display: flex; flex-direction: column; gap: 8px; width: 340px; padding: 16px 12px; border-radius: 14px; background: var(--surface-sunken, #1c1b1a); } .ds-contact { align-self: flex-end; max-width: 86%; padding: 8px 12px; border-radius: 16px; border-bottom-right-radius: 6px; background: var(--accent, #b85a38); color: var(--on-accent, #ffffff); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; line-height: 1.45; } .ds-bot { padding: 4px; font-family: ui-serif, Georgia, 'Times New Roman', serif; font-size: 1rem; line-height: 1.6; color: var(--text, #faf9f5); } .ds-opt { align-self: flex-start; width: min(86%, 280px); min-height: 40px; padding: 0 12px; border: 1px solid var(--border, rgb(222 220 209 / 13%)); border-radius: 12px; background: var(--surface-raised, #30302e); color: var(--accent-text, #e8957a); font-family: ui-sans-serif, system-ui, sans-serif; font-size: 0.9375rem; font-weight: 550; cursor: pointer; transition: background-color 150ms ease, transform 160ms cubic-bezier(0.23, 1, 0.32, 1); } .ds-opt:hover { background: var(--hover, rgb(250 249 245 / 6%)); } .ds-opt:active { transform: scale(0.97); } .ds-opt:focus-visible { outline: 2px solid var(--focus, #e8957a); outline-offset: 2px; }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Warm Writing Desk",
+    "overview": "A dark, quiet workspace where building a bot feels like writing, not wiring. Grounds are warm near-blacks stacked in small tonal steps, text is ivory and sand, and a single clay accent marks what to do next, what is selected and where focus is. Dark is the designed theme; light follows the operating system from the same token names (values live in `packages/web/app/globals.css` and the sidecar).\n\nDensity is calm: one system sans face, a short type ramp, 44px controls, generous gaps on a 4px base. Depth comes from tonal layering and hairline borders first, soft shadows only where something floats over the canvas. The one expressive move is the simulator: the bot's replies are set unboxed in a serif voice face, the Contact's messages sit in clay bubbles, so testing reads like a conversation rather than a debug log.\n\nThe world refuses the cold blue SaaS dashboard with a dense grey canvas. Phones come first: on a phone the editor owns the full viewport and details rise as bottom sheets; at 900px and up a left sidebar appears and sheets dock to the right.",
+    "keyCharacteristics": [
+      "Warm near-black tonal stack, no pure black or cool greys.",
+      "One clay accent for primary action, selection, focus and the active tab.",
+      "System sans for everything operational; serif only for the bot's voice.",
+      "Hairline translucent-sand borders; soft, low shadows only on floating layers.",
+      "44px touch targets on coarse pointers, everywhere."
+    ],
+    "rules": [
+      { "name": "The One Clay Rule", "body": "Clay is the only accent. It marks the primary action, selection, focus and the current place; nothing decorative is clay.", "section": "colors" },
+      { "name": "The Wash-Not-Fill Rule", "body": "Selected and on states use the 12-16% wash of their color with the ink tone as text, never a saturated fill. The filled clay is reserved for the primary button and the Contact's voice.", "section": "colors" },
+      { "name": "The Icon-Only Step Hue Rule", "body": "Step-type colors identify, they don't decorate: icon, handle ring, menu icon. Node bodies stay on the raised surface.", "section": "colors" },
+      { "name": "The Single Voice Rule", "body": "The serif belongs to the bot. It never appears in chrome, headings or forms.", "section": "typography" },
+      { "name": "The Half-Step Weight Rule", "body": "Interactive text sits at 550, between regular body and 600 headings, so controls read as touchable without shouting.", "section": "typography" },
+      { "name": "The Float-Only Shadow Rule", "body": "If it scrolls with the page, it has no shadow. Shadows mean \"this is above the work.\"", "section": "elevation" }
+    ],
+    "dos": [
+      "Do keep every interactive target at 44px on coarse pointers, extending hit areas invisibly where the visual must stay small (switch, canvas handles).",
+      "Do gate hover effects behind `(hover: hover) and (pointer: fine)`; touch gets press feedback (scale 0.97) instead.",
+      "Do give every motion a reduced-motion path: transforms drop out, sheets and dialogs fall back to a short fade, pop-in and message animations are removed.",
+      "Do offer a non-drag path for every drag: steps open with Enter or Space after Tab, and step connections can be set from selects in the step panel.",
+      "Do make phone overlays true modals: dialog semantics, inert background, focus on open and focus returned on close.",
+      "Do use the 2px focus-clay outline with 2px offset for keyboard focus everywhere; inputs use the border-plus-halo variant.",
+      "Do use the ease-out curve for press and pop-in, the drawer curve for sheets; keep UI transitions at 150-200ms and sheets at 420ms."
+    ],
+    "donts": [
+      "Don't introduce a second accent or a cool blue-grey neutral; the grounds stay warm.",
+      "Don't fill step nodes or large areas with step-type hues.",
+      "Don't use the serif outside the bot's voice.",
+      "Don't put shadows on resting cards, lists or panels.",
+      "Don't drop input text below 16px."
+    ]
+  }
+}
