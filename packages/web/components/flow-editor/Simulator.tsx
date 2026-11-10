@@ -9,23 +9,23 @@ import {
   type Variables,
 } from "@workflow-agent/core/engine";
 import type { BusinessHours, FlowDefinition } from "@workflow-agent/core/flow-definition";
+import { AlertTriangle, ArrowUp, List, RotateCcw } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import styles from "./simulator.module.css";
 
-type ChatLine = { author: "contact" | "bot"; text: string; options?: Reply["options"] };
+type ChatLine = { id: number; author: "contact" | "bot"; text: string; options?: Reply["options"] };
 
 type Props = {
   draft: FlowDefinition;
   hasIssues: boolean;
   businessHours: BusinessHours | null;
-  onClose: () => void;
 };
 
 /**
  * Chats with the draft as a Contact would on WhatsApp. Runs the same pure
  * engine as live Sessions, entirely in the browser: nothing is sent or stored.
  */
-export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
+export function Simulator({ draft, hasIssues, businessHours }: Props) {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [waitingAt, setWaitingAt] = useState<string | null>(null);
   const [variables, setVariables] = useState<Variables>({});
@@ -33,9 +33,10 @@ export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
   const [text, setText] = useState("");
   const [openList, setOpenList] = useState<number | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const nextId = useRef(0);
 
   useEffect(() => {
-    bottomRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+    bottomRef.current?.scrollIntoView({ block: "end" });
   }, [lines]);
 
   const reset = () => {
@@ -60,8 +61,8 @@ export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
     setVariables(run.variables);
     setLines((current) => [
       ...current,
-      { author: "contact", text: shown },
-      ...run.replies.map((reply) => ({ author: "bot" as const, ...reply })),
+      { id: nextId.current++, author: "contact", text: shown },
+      ...run.replies.map((reply) => ({ id: nextId.current++, author: "bot" as const, ...reply })),
     ]);
     setWaitingAt(run.waitingAt);
     setEnded(run.waitingAt === null);
@@ -79,39 +80,36 @@ export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
   const lastBotIndex = lines.reduce((last, line, index) => (line.author === "bot" ? index : last), -1);
 
   return (
-    <aside className={styles.simulator} aria-label="Simulador">
-      <div className={styles.header}>
-        <div>
-          <strong>Simulador</strong>
-          <p className={styles.hint}>Prueba el borrador actual. No envía mensajes reales.</p>
-        </div>
-        <div className="spacer" />
-        <button type="button" onClick={reset}>
+    <div className={styles.simulator}>
+      <div className={styles.toolbar}>
+        <p className={styles.hint}>Prueba el borrador, aunque no esté guardado. No envía mensajes reales.</p>
+        <button type="button" className="btn btn-sm btn-ghost" onClick={reset} disabled={lines.length === 0}>
+          <RotateCcw aria-hidden="true" />
           Reiniciar
-        </button>
-        <button type="button" onClick={onClose} aria-label="Cerrar simulador">
-          ✕
         </button>
       </div>
 
       {hasIssues && (
-        <p className={styles.warning}>El borrador tiene problemas; la conversación puede cortarse.</p>
+        <p className={`notice notice-warning ${styles.warning}`}>
+          <AlertTriangle aria-hidden="true" />
+          El borrador tiene problemas; la conversación puede cortarse.
+        </p>
       )}
 
-      <div className={styles.chat}>
+      <div className={styles.chat} role="log" aria-live="polite" aria-label="Conversación simulada">
         {lines.length === 0 && (
-          <p className={styles.empty}>Escribe un mensaje como si fueras un cliente, por ejemplo "hola".</p>
+          <p className={styles.empty}>Escribe como si fueras un cliente. Por ejemplo, "hola".</p>
         )}
         {lines.map((line, index) => (
-          <div key={index} className={styles.lineGroup}>
+          <div key={line.id} className={styles.lineGroup} data-author={line.author}>
             <div className={line.author === "contact" ? styles.contact : styles.bot}>{line.text}</div>
             {line.options?.style === "buttons" && (
-              <div className={styles.buttons}>
+              <div className={styles.options}>
                 {line.options.items.map((item) => (
                   <button
                     key={item.id}
                     type="button"
-                    className={styles.optionButton}
+                    className={styles.option}
                     disabled={index !== lastBotIndex || ended}
                     onClick={() => send({ text: item.label, selectedOptionId: item.id })}
                   >
@@ -121,14 +119,16 @@ export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
               </div>
             )}
             {line.options?.style === "list" && (
-              <div className={styles.buttons}>
+              <div className={styles.options}>
                 <button
                   type="button"
-                  className={styles.optionButton}
+                  className={styles.option}
                   disabled={index !== lastBotIndex || ended}
+                  aria-expanded={openList === index}
                   onClick={() => setOpenList(openList === index ? null : index)}
                 >
-                  ☰ Ver opciones
+                  <List aria-hidden="true" />
+                  Ver opciones
                 </button>
                 {openList === index && (
                   <ul className={styles.list}>
@@ -162,16 +162,22 @@ export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
       )}
 
       <form className={styles.composer} onSubmit={submit}>
+        <label htmlFor="simulator-message" className="sr-only">
+          Mensaje del cliente
+        </label>
         <input
+          id="simulator-message"
+          className="input"
           value={text}
           onChange={(event) => setText(event.target.value)}
           placeholder="Escribe un mensaje"
-          aria-label="Mensaje del cliente"
+          autoComplete="off"
+          enterKeyHint="send"
         />
-        <button type="submit" className="primary">
-          Enviar
+        <button type="submit" className="btn btn-primary btn-icon" aria-label="Enviar" disabled={!text.trim()}>
+          <ArrowUp />
         </button>
       </form>
-    </aside>
+    </div>
   );
 }
