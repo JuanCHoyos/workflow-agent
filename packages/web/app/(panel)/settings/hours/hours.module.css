@@ -1,0 +1,38 @@
+.day {
+  display: grid;
+  grid-template-columns: 9rem 1fr auto 1fr;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.toggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggle input {
+  width: auto;
+}
+
+.saved {
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+  border-radius: 8px;
+  padding: 0.6rem 0.8rem;
+  margin: 0;
+}
+
+@media (max-width: 520px) {
+  .day {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .day > span {
+    display: none;
+  }
+
+  .toggle {
+    grid-column: 1 / -1;
+  }
+}

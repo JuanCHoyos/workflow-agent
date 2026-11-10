@@ -15,6 +15,7 @@ export default async function PanelLayout({ children }: { children: ReactNode })
         <nav className={styles.nav}>
           <Link href="/">Inicio</Link>
           <Link href="/flows">Flujos</Link>
+          <Link href="/settings/hours">Horario</Link>
         </nav>
         <div className="spacer" />
         <span className="muted">{user.email}</span>
