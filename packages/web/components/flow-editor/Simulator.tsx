@@ -1,21 +1,34 @@
 "use client";
 
-import { continueFrom, runSteps, type ContactInput, type Reply } from "@workflow-agent/core/engine";
-import type { FlowDefinition } from "@workflow-agent/core/flow-definition";
+import {
+  DEFAULT_TIME_ZONE,
+  continueFrom,
+  runSteps,
+  type ContactInput,
+  type Reply,
+  type Variables,
+} from "@workflow-agent/core/engine";
+import type { BusinessHours, FlowDefinition } from "@workflow-agent/core/flow-definition";
 import { useEffect, useRef, useState } from "react";
 import styles from "./simulator.module.css";
 
 type ChatLine = { author: "contact" | "bot"; text: string; options?: Reply["options"] };
 
-type Props = { draft: FlowDefinition; hasIssues: boolean; onClose: () => void };
+type Props = {
+  draft: FlowDefinition;
+  hasIssues: boolean;
+  businessHours: BusinessHours | null;
+  onClose: () => void;
+};
 
 /**
  * Chats with the draft as a Contact would on WhatsApp. Runs the same pure
  * engine as live Sessions, entirely in the browser: nothing is sent or stored.
  */
-export function Simulator({ draft, hasIssues, onClose }: Props) {
+export function Simulator({ draft, hasIssues, businessHours, onClose }: Props) {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [waitingAt, setWaitingAt] = useState<string | null>(null);
+  const [variables, setVariables] = useState<Variables>({});
   const [ended, setEnded] = useState(false);
   const [text, setText] = useState("");
   const [openList, setOpenList] = useState<number | null>(null);
@@ -28,12 +41,23 @@ export function Simulator({ draft, hasIssues, onClose }: Props) {
   const reset = () => {
     setLines([]);
     setWaitingAt(null);
+    setVariables({});
     setEnded(false);
     setOpenList(null);
   };
 
   const send = (input: ContactInput, shown = input.text) => {
-    const run = waitingAt ? continueFrom(draft, waitingAt, input) : runSteps(draft, draft.startStepId);
+    // A new Session (first message, or after the Flow ended) starts with no variables.
+    const context = {
+      variables: waitingAt ? variables : {},
+      now: new Date(),
+      timeZone: DEFAULT_TIME_ZONE,
+      businessHours: businessHours ?? undefined,
+    };
+    const run = waitingAt
+      ? continueFrom(draft, waitingAt, input, context)
+      : runSteps(draft, draft.startStepId, context);
+    setVariables(run.variables);
     setLines((current) => [
       ...current,
       { author: "contact", text: shown },
@@ -126,6 +150,16 @@ export function Simulator({ draft, hasIssues, onClose }: Props) {
         )}
         <div ref={bottomRef} />
       </div>
+
+      {Object.keys(variables).length > 0 && (
+        <div className={styles.variables} aria-label="Variables de la Sesión">
+          {Object.entries(variables).map(([name, value]) => (
+            <span key={name} className={styles.variable}>
+              {name} = {value}
+            </span>
+          ))}
+        </div>
+      )}
 
       <form className={styles.composer} onSubmit={submit}>
         <input

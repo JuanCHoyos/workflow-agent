@@ -212,3 +212,51 @@
     min-height: 0;
   }
 }
+
+.node_question {
+  border-top: 4px solid #c27c1a;
+}
+
+.node_condition {
+  border-top: 4px solid #3b7dd8;
+}
+
+.nodeVariable {
+  margin: 0.3rem 0 0;
+  font-size: 0.75rem;
+  font-family: ui-monospace, monospace;
+  color: var(--text-muted);
+}
+
+.nodeOptionMuted {
+  color: var(--text-muted);
+  font-style: italic;
+}
+
+.ruleCard {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.6rem;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--surface-muted);
+}
+
+.days {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.dayToggle {
+  flex-direction: row;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 400;
+  font-size: 0.8rem;
+}
+
+.dayToggle input {
+  width: auto;
+}

@@ -122,3 +122,20 @@
   padding: 0.65rem;
   border-top: 1px solid var(--border);
 }
+
+.variables {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 0.65rem 0;
+  border-top: 1px solid var(--border);
+}
+
+.variable {
+  font-family: ui-monospace, monospace;
+  font-size: 0.75rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-strong);
+}
