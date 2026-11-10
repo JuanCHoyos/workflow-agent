@@ -5,6 +5,7 @@ import { redirect } from "next/navigation";
 import { DAY_LABELS } from "../../../../components/flow-editor/model.ts";
 import { requireEditor } from "../../../../lib/editor-access.ts";
 import styles from "./hours.module.css";
+import { SaveBar } from "./SaveBar.tsx";
 
 const TIME = /^([01]\d|2[0-3]):[0-5]\d$/;
 
@@ -110,9 +111,7 @@ export default async function BusinessHoursPage({
               );
             })}
           </ul>
-          <button type="submit" className="btn btn-primary" style={{ alignSelf: "flex-start" }}>
-            Guardar horario
-          </button>
+          <SaveBar />
         </form>
       </div>
     </div>

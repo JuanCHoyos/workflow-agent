@@ -68,3 +68,34 @@
     max-width: 320px;
   }
 }
+
+.saveBar {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: var(--space-3);
+}
+
+.saveHint {
+  font-size: 0.875rem;
+  color: var(--accent-text);
+}
+
+/* Phones: the bar sticks above the tab bar so saving never needs a scroll. */
+@media (max-width: 899px) {
+  .saveBar {
+    position: sticky;
+    bottom: calc(64px + var(--space-3) + env(safe-area-inset-bottom));
+    z-index: 5;
+    padding: var(--space-3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    background: color-mix(in srgb, var(--surface-raised) 92%, transparent);
+    backdrop-filter: blur(16px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .saveBar .saveHint {
+    flex: 1;
+  }
+}

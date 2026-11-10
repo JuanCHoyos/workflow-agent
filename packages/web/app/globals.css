@@ -311,8 +311,9 @@ p {
 
 /* Toggle buttons (aria-pressed) show their on state. */
 .btn[aria-pressed="true"] {
-  --btn-bg: var(--pressed);
-  --btn-border: var(--border-strong);
+  --btn-bg: var(--accent-soft);
+  --btn-fg: var(--accent-text);
+  --btn-border: color-mix(in srgb, var(--accent-text) 50%, transparent);
 }
 
 .btn-primary {
