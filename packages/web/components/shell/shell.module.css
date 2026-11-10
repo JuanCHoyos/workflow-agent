@@ -112,8 +112,9 @@
 }
 
 /* The editor owns the whole space between the chrome. */
-/* The editor has its own toolbar, so the app top bar steps aside on phones. */
-.shell[data-editor] .topbar {
+/* The editor has its own toolbar (with a back arrow), so the app chrome steps aside on phones. */
+.shell[data-editor] .topbar,
+.shell[data-editor] .tabbar {
   display: none;
 }
 
@@ -121,7 +122,7 @@
   /* A fixed height (not flex-grow) so the canvas can resolve height: 100%. */
   flex: none;
   padding: 0;
-  height: calc(100dvh - var(--tabbar-h) - env(safe-area-inset-bottom));
+  height: 100dvh;
   overflow: hidden;
 }
 

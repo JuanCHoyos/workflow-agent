@@ -7,7 +7,7 @@ import { memo } from "react";
 import { STEP_LABELS, describeCheck } from "./model.ts";
 import styles from "./editor.module.css";
 
-export type StepNodeData = { step: FlowStep; isStart: boolean; hasIssue: boolean };
+export type StepNodeData = { step: FlowStep; isStart: boolean; hasIssue: boolean; isActive?: boolean };
 export type StepNodeType = Node<StepNodeData, "step">;
 
 const ICONS: Record<FlowStep["type"], LucideIcon> = {
@@ -28,9 +28,9 @@ function Branch({ id, label, muted }: { id: string; label: string; muted?: boole
 }
 
 function StepNodeView({ data, selected }: NodeProps<StepNodeType>) {
-  const { step, isStart, hasIssue } = data;
+  const { step, isStart, hasIssue, isActive } = data;
   const Icon = ICONS[step.type];
-  const classes = [styles.node, styles[`node_${step.type}`], selected && styles.nodeSelected, hasIssue && styles.nodeIssue]
+  const classes = [styles.node, styles[`node_${step.type}`], selected && styles.nodeSelected, hasIssue && styles.nodeIssue, isActive && styles.nodeActive]
     .filter(Boolean)
     .join(" ");
 
@@ -40,6 +40,7 @@ function StepNodeView({ data, selected }: NodeProps<StepNodeType>) {
       <div className={styles.nodeHeader}>
         <Icon aria-hidden="true" />
         <span>{STEP_LABELS[step.type]}</span>
+        {isActive && <span className={styles.activeBadge}>Simulando</span>}
         {isStart && <span className={styles.startBadge}>Inicio</span>}
       </div>
       {(step.type === "message" || step.type === "optionsMenu" || step.type === "question") && (

@@ -77,7 +77,23 @@
 }
 
 .status {
+  display: none;
   color: var(--text-muted);
+}
+
+.saveButton {
+  position: relative;
+}
+
+.unsavedDot {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--accent-text);
+  box-shadow: 0 0 0 2px var(--bg-shell);
 }
 
 .statusError {
@@ -365,11 +381,17 @@
   position: absolute;
   inset: 0;
   display: grid;
-  place-items: center;
+  place-content: center;
+  justify-items: center;
+  gap: var(--space-3);
   padding: var(--space-5);
   pointer-events: none;
-  color: var(--text-muted);
+  color: var(--text-secondary);
   text-align: center;
+}
+
+.emptyCanvas :global(.btn) {
+  pointer-events: auto;
 }
 
 @keyframes pop-in {
@@ -421,6 +443,20 @@
 .nodeSelected {
   border-color: var(--accent-text);
   box-shadow: 0 0 0 3px var(--accent-soft), var(--shadow-md);
+}
+
+/* The step the simulated conversation is waiting at. */
+.nodeActive {
+  border-color: var(--accent-text);
+}
+
+.activeBadge {
+  padding: 1px var(--space-2);
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--on-accent);
+  font-size: 0.6875rem;
+  font-weight: 650;
 }
 
 .nodeIssue:not(.nodeSelected) {
@@ -615,6 +651,14 @@
 @media (min-width: 900px) {
   .toolbar {
     padding: var(--space-2) var(--space-4);
+  }
+
+  .status {
+    display: inline;
+  }
+
+  .unsavedDot {
+    display: none;
   }
 
   .hideOnPhone {

@@ -20,6 +20,18 @@ const SIGN_IN_THEME: Theme = {
   primary: "#b85a38",
   background: { dark: "#262624", light: "#f5f4ee" },
   font: { family: 'ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif', scale: "1.05" },
+  css: `
+    [data-component="center"] { padding-inline: 24px; box-sizing: border-box; width: 100%; max-width: 420px; }
+    @media (prefers-color-scheme: dark) {
+      [data-component="input"] { background: #1c1b1a; border-color: rgb(222 220 209 / 24%); color: #faf9f5; }
+      [data-component="input"]::placeholder { color: #a8a69d; }
+      [data-component="form-footer"] { color: #c2c0b6; }
+    }
+    @media (prefers-color-scheme: light) {
+      [data-component="input"]::placeholder { color: #6b6a64; }
+      [data-component="form-footer"] { color: #4d4c48; }
+    }
+  `,
 };
 
 export type AuthIssuerOptions = {

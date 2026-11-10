@@ -105,6 +105,7 @@ export function FlowEditor({
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [side, setSide] = useState<Side>(null);
   const [addOpen, setAddOpen] = useState(false);
+  const [activeStepId, setActiveStepId] = useState<string | null>(null);
   const [issuesOpen, setIssuesOpen] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [status, setStatus] = useState<Status>({ kind: "idle", text: "" });
@@ -147,7 +148,12 @@ export function FlowEditor({
       const byId = new Map(current.map((node) => [node.id, node]));
       return Object.entries(draft.steps).map(([id, step], index) => {
         const existing = byId.get(id);
-        const data = { step, isStart: id === draft.startStepId, hasIssue: stepsWithIssues.has(id) };
+        const data = {
+          step,
+          isStart: id === draft.startStepId,
+          hasIssue: stepsWithIssues.has(id),
+          isActive: side === "simulator" && id === activeStepId,
+        };
         return existing
           ? { ...existing, data, selected: id === selectedId }
           : {
@@ -159,7 +165,23 @@ export function FlowEditor({
             };
       });
     });
-  }, [draft.steps, draft.startStepId, draft.positions, stepsWithIssues, selectedId]);
+  }, [draft.steps, draft.startStepId, draft.positions, stepsWithIssues, selectedId, side, activeStepId]);
+
+  // A docked panel narrows the canvas: keep the selected step (or the whole Flow) in view.
+  useEffect(() => {
+    if (!flow) return;
+    const frame = requestAnimationFrame(() =>
+      requestAnimationFrame(() => {
+        const selected = side === "step" && selectedIdRef.current ? flow.getNode(selectedIdRef.current) : undefined;
+        if (selected) {
+          flow.setCenter(selected.position.x + 124, selected.position.y + 60, { zoom: flow.getZoom(), duration: 300 });
+        } else {
+          flow.fitView({ padding: 0.3, maxZoom: 1, duration: 300 });
+        }
+      }),
+    );
+    return () => cancelAnimationFrame(frame);
+  }, [side, flow]);
 
   const edges: Edge[] = useMemo(
     () =>
@@ -175,6 +197,9 @@ export function FlowEditor({
       ),
     [draft.steps],
   );
+
+  const selectedIdRef = useRef(selectedId);
+  selectedIdRef.current = selectedId;
 
   const select = useCallback((id: string | null) => {
     setSelectedId(id);
@@ -355,11 +380,12 @@ export function FlowEditor({
           </button>
           <button
             type="button"
-            className="btn btn-sm"
+            className={`btn btn-sm ${styles.saveButton}`}
             onClick={save}
             disabled={pending || !dirty}
-            aria-label="Guardar borrador"
+            aria-label={dirty ? "Guardar borrador (hay cambios sin guardar)" : "Guardar borrador"}
           >
+            {dirty && <span className={styles.unsavedDot} aria-hidden="true" />}
             <span className={styles.hideOnPhone} aria-hidden="true">
               Guardar
             </span>
@@ -498,7 +524,11 @@ export function FlowEditor({
 
           {Object.keys(draft.steps).length === 0 && (
             <div className={styles.emptyCanvas}>
-              <p>Este Flujo está vacío. Agrega un Mensaje para empezar.</p>
+              <p>Este Flujo está vacío. Empieza con el saludo que recibe cada cliente.</p>
+              <button type="button" className="btn btn-primary" onClick={() => add("message")}>
+                <Plus aria-hidden="true" />
+                Agregar el primer Mensaje
+              </button>
             </div>
           )}
         </div>
@@ -509,7 +539,12 @@ export function FlowEditor({
           onClose={() => setSide(null)}
           label="Simulador del Flujo"
         >
-          <Simulator draft={draft} hasIssues={issues.length > 0} businessHours={businessHours} />
+          <Simulator
+            draft={draft}
+            hasIssues={issues.length > 0}
+            businessHours={businessHours}
+            onActiveStepChange={setActiveStepId}
+          />
         </Sheet>
 
         <Sheet

@@ -19,13 +19,15 @@ type Props = {
   draft: FlowDefinition;
   hasIssues: boolean;
   businessHours: BusinessHours | null;
+  /** Tells the editor which step the simulated Session waits at, to light it up on the canvas. */
+  onActiveStepChange?: (stepId: string | null) => void;
 };
 
 /**
  * Chats with the draft as a Contact would on WhatsApp. Runs the same pure
  * engine as live Sessions, entirely in the browser: nothing is sent or stored.
  */
-export function Simulator({ draft, hasIssues, businessHours }: Props) {
+export function Simulator({ draft, hasIssues, businessHours, onActiveStepChange }: Props) {
   const [lines, setLines] = useState<ChatLine[]>([]);
   const [waitingAt, setWaitingAt] = useState<string | null>(null);
   const [variables, setVariables] = useState<Variables>({});
@@ -38,6 +40,12 @@ export function Simulator({ draft, hasIssues, businessHours }: Props) {
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ block: "end" });
   }, [lines]);
+
+  useEffect(() => {
+    onActiveStepChange?.(waitingAt);
+  }, [waitingAt, onActiveStepChange]);
+
+  useEffect(() => () => onActiveStepChange?.(null), [onActiveStepChange]);
 
   const reset = () => {
     setLines([]);
