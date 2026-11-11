@@ -1,8 +1,19 @@
 "use client";
 
 import type { FlowStep } from "@workflow-agent/core/flow-definition";
-import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
-import { Diamond, HelpCircle, ListChecks, MessageSquare, Square, type LucideIcon } from "lucide-react";
+import { Handle, NodeToolbar, Position, type Node, type NodeProps } from "@xyflow/react";
+import {
+  CopyPlus,
+  Diamond,
+  HelpCircle,
+  ListChecks,
+  MessageSquare,
+  Pencil,
+  Square,
+  Trash2,
+  type LucideIcon,
+} from "lucide-react";
+import { useEditorActions } from "./EditorActions.tsx";
 import { memo } from "react";
 import { STEP_LABELS, describeCheck } from "./model.ts";
 import styles from "./editor.module.css";
@@ -27,8 +38,9 @@ function Branch({ id, label, muted }: { id: string; label: string; muted?: boole
   );
 }
 
-function StepNodeView({ data, selected }: NodeProps<StepNodeType>) {
+function StepNodeView({ id, data, selected }: NodeProps<StepNodeType>) {
   const { step, isStart, hasIssue, isActive } = data;
+  const { openStep, duplicateSteps, removeSteps, selectionSize } = useEditorActions();
   const Icon = ICONS[step.type];
   const classes = [styles.node, styles[`node_${step.type}`], selected && styles.nodeSelected, hasIssue && styles.nodeIssue, isActive && styles.nodeActive]
     .filter(Boolean)
@@ -36,6 +48,19 @@ function StepNodeView({ data, selected }: NodeProps<StepNodeType>) {
 
   return (
     <div className={classes}>
+      <NodeToolbar isVisible={selected && selectionSize === 1} position={Position.Top} offset={10}>
+        <div className={styles.nodeToolbar} role="toolbar" aria-label="Acciones del paso">
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => openStep(id)} aria-label="Editar paso" title="Editar">
+            <Pencil />
+          </button>
+          <button type="button" className="btn btn-ghost btn-icon btn-sm" onClick={() => duplicateSteps([id])} aria-label="Duplicar paso" title="Duplicar (Ctrl+D)">
+            <CopyPlus />
+          </button>
+          <button type="button" className="btn btn-danger btn-icon btn-sm" onClick={() => removeSteps([id])} aria-label="Eliminar paso" title="Eliminar (Supr)">
+            <Trash2 />
+          </button>
+        </div>
+      </NodeToolbar>
       <Handle type="target" position={Position.Left} className={styles.handle} />
       <div className={styles.nodeHeader}>
         <Icon aria-hidden="true" />
