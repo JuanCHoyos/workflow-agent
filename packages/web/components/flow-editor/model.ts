@@ -96,36 +96,115 @@ export function addStep(definition: FlowDefinition, type: StepType, position: { 
   };
 }
 
-/** Points every handle of `step` that matches `from` to `to`. */
-function replaceTargets(step: FlowStep, from: string, to: string): FlowStep {
-  const swap = (target: string) => (target === from ? to : target);
+/** Rewrites every outgoing connection of `step` through `map`. */
+function mapTargets(step: FlowStep, map: (target: string) => string): FlowStep {
   switch (step.type) {
     case "message":
     case "question":
-      return { ...step, next: swap(step.next) };
+      return { ...step, next: map(step.next) };
     case "optionsMenu":
-      return { ...step, options: step.options.map((option) => ({ ...option, next: swap(option.next) })) };
+      return { ...step, options: step.options.map((option) => ({ ...option, next: map(option.next) })) };
     case "condition":
       return {
         ...step,
-        rules: step.rules.map((rule) => ({ ...rule, next: swap(rule.next) })),
-        otherwise: swap(step.otherwise),
+        rules: step.rules.map((rule) => ({ ...rule, next: map(rule.next) })),
+        otherwise: map(step.otherwise),
       };
     case "end":
       return step;
   }
 }
 
-export function removeStep(definition: FlowDefinition, stepId: string): FlowDefinition {
+/** Removes the steps and disconnects every connection that pointed to them. */
+export function removeSteps(definition: FlowDefinition, stepIds: readonly string[]): FlowDefinition {
+  const removed = new Set(stepIds);
   const steps = Object.fromEntries(
     Object.entries(definition.steps)
-      .filter(([id]) => id !== stepId)
-      .map(([id, step]) => [id, replaceTargets(step, stepId, "")]),
+      .filter(([id]) => !removed.has(id))
+      .map(([id, step]) => [id, mapTargets(step, (target) => (removed.has(target) ? "" : target))]),
   );
-  const positions = { ...definition.positions };
-  delete positions[stepId];
-  const startStepId = definition.startStepId === stepId ? (Object.keys(steps)[0] ?? "") : definition.startStepId;
+  const positions = Object.fromEntries(
+    Object.entries(definition.positions ?? {}).filter(([id]) => !removed.has(id)),
+  );
+  const startStepId = removed.has(definition.startStepId) ? (Object.keys(steps)[0] ?? "") : definition.startStepId;
   return { startStepId, steps, positions };
+}
+
+export function removeStep(definition: FlowDefinition, stepId: string): FlowDefinition {
+  return removeSteps(definition, [stepId]);
+}
+
+/** Copied steps: connections inside the selection are kept, the rest are cut. */
+export type FlowClipboard = {
+  steps: Record<string, FlowStep>;
+  positions: Record<string, { x: number; y: number }>;
+};
+
+export function copySteps(definition: FlowDefinition, stepIds: readonly string[]): FlowClipboard {
+  const chosen = new Set(stepIds.filter((id) => definition.steps[id]));
+  const steps: Record<string, FlowStep> = {};
+  const positions: Record<string, { x: number; y: number }> = {};
+  for (const id of chosen) {
+    steps[id] = mapTargets(definition.steps[id]!, (target) => (chosen.has(target) ? target : ""));
+    positions[id] = definition.positions?.[id] ?? { x: 0, y: 0 };
+  }
+  return { steps, positions };
+}
+
+/** Pastes copies under fresh ids, rewired to each other, shifted by `offset`. */
+export function pasteSteps(definition: FlowDefinition, clipboard: FlowClipboard, offset: { x: number; y: number }) {
+  const idMap = new Map<string, string>();
+  let working: FlowDefinition = definition;
+  for (const oldId of Object.keys(clipboard.steps)) {
+    const newId = nextStepId(working);
+    idMap.set(oldId, newId);
+    // Reserve the id so the next one is different.
+    working = { ...working, steps: { ...working.steps, [newId]: { type: "end" } } };
+  }
+  const steps = { ...definition.steps };
+  const positions = { ...definition.positions };
+  for (const [oldId, step] of Object.entries(clipboard.steps)) {
+    const newId = idMap.get(oldId)!;
+    steps[newId] = mapTargets(step, (target) => idMap.get(target) ?? "");
+    const at = clipboard.positions[oldId] ?? { x: 0, y: 0 };
+    positions[newId] = { x: at.x + offset.x, y: at.y + offset.y };
+  }
+  const pastedIds = [...idMap.values()];
+  const startStepId =
+    definition.startStepId && definition.steps[definition.startStepId] ? definition.startStepId : (pastedIds[0] ?? "");
+  return { definition: { startStepId, steps, positions }, pastedIds };
+}
+
+export type Alignment = "left" | "top";
+
+/** Lines selected steps up on their left edges or top edges. */
+export function alignSteps(definition: FlowDefinition, stepIds: readonly string[], alignment: Alignment) {
+  const positions = { ...definition.positions };
+  const chosen = stepIds.filter((id) => positions[id]);
+  if (chosen.length < 2) return definition;
+  const axis = alignment === "left" ? "x" : "y";
+  const edge = Math.min(...chosen.map((id) => positions[id]![axis]));
+  for (const id of chosen) positions[id] = { ...positions[id]!, [axis]: edge };
+  return { ...definition, positions };
+}
+
+/** Spaces three or more selected steps evenly between the outermost two. */
+export function distributeSteps(
+  definition: FlowDefinition,
+  stepIds: readonly string[],
+  direction: "horizontal" | "vertical",
+) {
+  const positions = { ...definition.positions };
+  const axis = direction === "horizontal" ? "x" : "y";
+  const chosen = stepIds.filter((id) => positions[id]).sort((a, b) => positions[a]![axis] - positions[b]![axis]);
+  if (chosen.length < 3) return definition;
+  const first = positions[chosen[0]!]![axis];
+  const last = positions[chosen[chosen.length - 1]!]![axis];
+  const gap = (last - first) / (chosen.length - 1);
+  chosen.forEach((id, index) => {
+    positions[id] = { ...positions[id]!, [axis]: Math.round(first + gap * index) };
+  });
+  return { ...definition, positions };
 }
 
 const indexOf = (handle: string, prefix: string) => Number(handle.slice(prefix.length));
