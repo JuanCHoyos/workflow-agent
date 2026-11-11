@@ -716,3 +716,427 @@
   border-radius: var(--radius);
   background: var(--surface);
 }
+
+/* ============================================================
+   Pro editor: history, search, selection, menus, minimap
+   ============================================================ */
+
+.historyButtons {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.searchSlot {
+  display: none;
+}
+
+.search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 260px;
+}
+
+.searchIcon {
+  position: absolute;
+  left: var(--space-3);
+  width: 16px;
+  height: 16px;
+  color: var(--text-muted);
+  pointer-events: none;
+}
+
+.searchInput {
+  width: 100%;
+  height: 36px;
+  padding: 0 64px 0 36px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.searchInput::placeholder {
+  color: var(--text-muted);
+}
+
+.searchInput::-webkit-search-cancel-button {
+  display: none;
+}
+
+.searchInput:focus {
+  outline: 2px solid var(--focus);
+  outline-offset: 1px;
+  background: var(--surface-raised);
+}
+
+.searchKbd {
+  position: absolute;
+  right: var(--space-2);
+  pointer-events: none;
+}
+
+.searchResults {
+  position: absolute;
+  top: calc(100% + var(--space-1));
+  left: 0;
+  right: 0;
+  z-index: 30;
+  margin: 0;
+  padding: var(--space-1);
+  list-style: none;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  transform-origin: top center;
+  animation: pop-in 160ms var(--ease-out);
+}
+
+.searchResult {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+}
+
+.searchResult[aria-selected="true"] {
+  background: var(--hover);
+}
+
+.searchType {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.searchPreview {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 0.875rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.kbd {
+  display: inline-flex;
+  align-items: center;
+  min-width: 20px;
+  height: 20px;
+  padding: 0 5px;
+  border: 1px solid var(--border);
+  border-bottom-width: 2px;
+  border-radius: 5px;
+  background: var(--surface-sunken);
+  color: var(--text-secondary);
+  font-family: var(--font-sans);
+  font-size: 0.6875rem;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+/* Edges: a remove button sits on the selected connection. */
+.edgeButton {
+  position: absolute;
+  display: grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--border-strong);
+  border-radius: 999px;
+  background: var(--surface-raised);
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  pointer-events: all;
+  opacity: 0;
+  scale: 0.8;
+  transition: opacity 150ms ease, scale 150ms var(--ease-out), color 150ms ease;
+}
+
+.edgeButton svg {
+  width: 14px;
+  height: 14px;
+}
+
+.edgeButton[data-visible],
+.edgeButton:focus-visible {
+  opacity: 1;
+  scale: 1;
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .edgeButton:hover {
+    color: var(--danger);
+    border-color: var(--danger);
+  }
+}
+
+/* Floating toolbar above a single selected step. */
+.nodeToolbar {
+  display: flex;
+  gap: 2px;
+  padding: 3px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-md);
+  transform-origin: bottom center;
+  animation: pop-in 150ms var(--ease-out);
+}
+
+/* Several selected steps: a floating action bar. */
+.selectionBar {
+  position: absolute;
+  top: var(--space-3);
+  left: 50%;
+  z-index: 7;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  max-width: calc(100% - 24px);
+  padding: var(--space-1);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  translate: -50% 0;
+  animation: bar-in 200ms var(--ease-out);
+  scrollbar-width: none;
+}
+
+.selectionCount {
+  flex: none;
+  padding: 0 var(--space-2);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.barDivider {
+  flex: none;
+  width: 1px;
+  height: 20px;
+  margin: 0 var(--space-1);
+  background: var(--border);
+}
+
+.selectionBar :global(.btn) {
+  flex: none;
+}
+
+@keyframes bar-in {
+  from {
+    opacity: 0;
+    translate: -50% -6px;
+  }
+}
+
+/* Context menu and the connect-to-a-new-step menu. */
+.canvasMenu {
+  position: fixed;
+  z-index: 40;
+  min-width: 240px;
+  max-width: min(300px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  padding: var(--space-1);
+  overflow-y: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: var(--surface-raised);
+  box-shadow: var(--shadow-lg);
+  transform-origin: top left;
+  animation: pop-in 140ms var(--ease-out);
+}
+
+.menuHeading {
+  padding: var(--space-2) var(--space-3) var(--space-1);
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.menuSeparator {
+  height: 1px;
+  margin: var(--space-1) var(--space-2);
+  background: var(--border);
+}
+
+.menuItem {
+  display: flex;
+  align-items: center;
+  gap: var(--space-3);
+  width: 100%;
+  min-height: 36px;
+  padding: var(--space-1) var(--space-3);
+  border: none;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text);
+  font: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.menuItem > svg {
+  flex: none;
+  width: 16px;
+  height: 16px;
+  color: var(--text-secondary);
+}
+
+.menuItem[data-danger],
+.menuItem[data-danger] > svg {
+  color: var(--danger);
+}
+
+.menuItem:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+.menuItem:focus-visible {
+  outline: none;
+  background: var(--hover);
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .menuItem:not(:disabled):hover {
+    background: var(--hover);
+  }
+}
+
+.menuText {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.menuHint {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+}
+
+/* Control toggles that are on. */
+.canvas :global(.react-flow__controls-button[data-on]) {
+  color: var(--accent-text);
+  background: var(--accent-soft);
+}
+
+.canvas :global(.react-flow__controls-button svg.lucide) {
+  max-width: 16px;
+  max-height: 16px;
+  fill: none;
+}
+
+.canvas :global(.react-flow__controls-button:focus-visible) {
+  outline: 2px solid var(--focus);
+  outline-offset: -2px;
+}
+
+/* Box selection mode on touch: dragging selects, so show it. */
+.canvas[data-select-mode] :global(.react-flow__pane) {
+  cursor: crosshair;
+}
+
+.minimap:global(.react-flow__minimap) {
+  display: none;
+  margin: var(--space-3);
+  overflow: hidden;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow-md);
+}
+
+.minimap :global(.react-flow__minimap-mask) {
+  fill: color-mix(in srgb, var(--bg) 70%, transparent);
+}
+
+/* Shortcuts dialog. */
+.shortcutList {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+}
+
+.shortcutRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) 0;
+  border-bottom: 1px solid var(--border);
+}
+
+.shortcutRow:last-child {
+  border-bottom: none;
+}
+
+.shortcutRow dt {
+  color: var(--text-secondary);
+  font-size: 0.875rem;
+}
+
+.shortcutRow dd {
+  display: flex;
+  gap: var(--space-1);
+  margin: 0;
+}
+
+@media (min-width: 900px) {
+  .searchSlot {
+    display: block;
+  }
+
+  .minimap:global(.react-flow__minimap) {
+    display: block;
+  }
+}
+
+@media (pointer: coarse) {
+  .menuItem {
+    min-height: var(--control-h);
+  }
+
+  .edgeButton {
+    width: 32px;
+    height: 32px;
+  }
+
+  .edgeButton::after {
+    content: "";
+    position: absolute;
+    inset: -6px;
+  }
+
+  .searchKbd {
+    display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .searchResults,
+  .nodeToolbar,
+  .selectionBar,
+  .canvasMenu {
+    animation: none;
+  }
+}
